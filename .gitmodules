@@ -1,9 +1,6 @@
 [submodule "RFKit"]
 	path = RFKit
 	url = git@192.168.1.99:iOS/RFKit
-[submodule "ASIHttp"]
-	path = ASIHttp
-	url = git@192.168.1.99:lib/ASIHttp
 [submodule "AFNetworking"]
 	path = AFNetworking
 	url = git@192.168.1.99:lib/AFNetworking
