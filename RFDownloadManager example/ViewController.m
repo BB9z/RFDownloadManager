@@ -9,14 +9,13 @@
 #import "ViewController.h"
 #import "AFHTTPRequestOperationLogger.h"
 #import "AFNetworking.h"
-#import "RFDownloadManager.h"
 
 @interface ViewController ()
 @property (RF_STRONG, nonatomic) RFDownloadManager *DM;
 @end
 
-NSString *testUrl1 = @"http://chinamobo.gicp.net/BooksFiles/143/N/143.pdf";
-NSString *testUrl2 = @"http://chinamobo.gicp.net/BooksFiles/143/N/143.pdf";
+NSString *testUrl1 = @"http://192.168.1.168/m.tar.gz";
+NSString *testUrl2 = @"http://192.168.1.168/a.apk";
 
 
 @implementation ViewController
@@ -32,9 +31,21 @@ NSString *testUrl2 = @"http://chinamobo.gicp.net/BooksFiles/143/N/143.pdf";
     
     [NSTimer scheduledTimerWithTimeInterval:.6 target:self selector:@selector(timerCallback) userInfo:nil repeats:YES];
     
-    self.DM = [RFDownloadManager sharedInstance];
-    [self.DM addRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:testUrl1] cachePolicy:NSURLRequestUseProtocolCachePolicy timeoutInterval:10]];
     
+    self.DM = [RFDownloadManager sharedInstance];
+    self.DM.delegate = self;
+    [self.DM addURL:[NSURL URLWithString:testUrl1] fileStorePath:[[NSBundle mainBundlePathForDocuments] stringByAppendingPathComponent:@"m.gz"]];
+    [self.DM addURL:[NSURL URLWithString:testUrl2] fileStorePath:[[NSBundle mainBundlePathForDocuments] stringByAppendingPathComponent:@"a.apk"]];
+
+    [self.DM startAll];
+//    [NSObject performBlock:^{
+//        douts(@"pause")
+//        [self.DM pauseAll];
+//    } afterDelay:3];
+//    [NSObject performBlock:^{
+//        douts(@"start")
+//        [self.DM startAll];
+//    } afterDelay:20];
 }
 
 - (void)timerCallback {
@@ -59,4 +70,17 @@ NSString *testUrl2 = @"http://chinamobo.gicp.net/BooksFiles/143/N/143.pdf";
     }
 }
 
+- (void)RFDownloadManager:(RFDownloadManager *)downloadManager operationCompleted:(RFFileDownloadOperation *)operation {
+    doutwork()
+    douto(operation.targetPath)
+}
+- (void)RFDownloadManager:(RFDownloadManager *)downloadManager operationFailed:(RFFileDownloadOperation *)operation {
+    doutwork()
+    douto(operation.error)
+}
+- (void)RFDownloadManager:(RFDownloadManager *)downloadManager operationStateUpdate:(RFFileDownloadOperation *)operation {
+    doutwork()
+    dout_float(operation.bytesDownloaded)
+    dout_float(operation.bytesFileSize)
+}
 @end
