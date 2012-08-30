@@ -38,6 +38,7 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(NSInteger bytes
 @synthesize shouldResume = _shouldResume;
 @synthesize deleteTempFileOnCancel = _deleteTempFileOnCancel;
 @synthesize progressiveDownloadProgress = _progressiveDownloadProgress;
+@synthesize userInfo = _userInfo;
 
 - (id)initWithRequest:(NSURLRequest *)urlRequest targetPath:(NSString *)targetPath {
     return [self initWithRequest:urlRequest targetPath:targetPath shouldResume:YES shouldCoverOldFile:NO];

@@ -88,8 +88,8 @@
 
 /// 文件大小
 @property (readonly) long long bytesFileSize;
-
-
+//  其他信息
+@property (strong, readwrite) NSDictionary *userInfo;
 
 /**
  Creates and returns an `AFDownloadRequestOperation`
