@@ -103,6 +103,9 @@
 }
 
 - (void)startOperation:(RFFileDownloadOperation *)operation {
+    if (!operation) {
+        douts(@"RFDownloadManager > startOperation: operation is nil")
+    }
     if ([operation isPaused]) {
         [operation resume];
     }
@@ -111,11 +114,17 @@
     }
 }
 - (void)pauseOperation:(RFFileDownloadOperation *)operation {
+    if (!operation) {
+        douts(@"RFDownloadManager > pauseOperation: operation is nil")
+    }
     if (![operation isPaused]) {
         [operation pause];
     }
 }
 - (void)cancelOperation:(RFFileDownloadOperation *)operation {
+    if (!operation) {
+        douts(@"RFDownloadManager > cancelOperation: operation is nil")
+    }
     [operation cancel];
 }
 

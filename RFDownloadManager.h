@@ -35,7 +35,7 @@
 @interface RFDownloadManager : NSObject
 @property (RF_WEAK, nonatomic) id<RFDownloadManagerDelegate> delegate;
 /// 下载队列中的任务
-@property (readonly) NSMutableArray *requrestOperations;
+@property (RF_STRONG, readonly, atomic) NSMutableArray *requrestOperations;
 
 // 未完成
 /// 是否有下载任务进行中
@@ -64,6 +64,7 @@
 - (void)pauseOperationWithURL:(NSURL *)url;
 - (void)cancelOperationWithURL:(NSURL *)url;
 
+- (RFFileDownloadOperation *)findOperationWithURL:(NSURL *)url;
 @end
 
 
