@@ -34,12 +34,20 @@
 
 @interface RFDownloadManager : NSObject
 @property (RF_WEAK, nonatomic) id<RFDownloadManagerDelegate> delegate;
+/// 下载队列中的任务
+@property (readonly) NSMutableArray *requrestOperations;
 
 // 未完成
+/// 是否有下载任务进行中
 @property (readonly, nonatomic) BOOL isDownloading;
 
 // 未完成
-@property (readonly, nonatomic) uint processingOperationCount;
+/// 正在下载任务的个数
+@property (readonly, nonatomic) uint runningTaskCount;
+
+// 未完成
+/// 同时允许的任务数
+@property (assign, nonatomic) uint maxRunningTaskCount;
 
 - (RFDownloadManager *)initWithDelegate:(id<RFDownloadManagerDelegate>)delegate;
 + (RFDownloadManager *)sharedInstance;
@@ -52,6 +60,9 @@
 - (void)startOperation:(RFFileDownloadOperation *)operation;
 - (void)pauseOperation:(RFFileDownloadOperation *)operation;
 - (void)cancelOperation:(RFFileDownloadOperation *)operation;
+- (void)startOperationWithURL:(NSURL *)url;
+- (void)pauseOperationWithURL:(NSURL *)url;
+- (void)cancelOperationWithURL:(NSURL *)url;
 
 @end
 

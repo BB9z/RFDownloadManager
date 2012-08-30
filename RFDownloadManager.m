@@ -3,7 +3,7 @@
 
 @interface RFDownloadManager ()
 @property (RF_STRONG, atomic) NSMutableArray *requrests;        // 未完成
-@property (RF_STRONG, atomic) NSMutableArray *requrestOperations;
+@property (RF_STRONG, readwrite, atomic) NSMutableArray *requrestOperations;
 @property (assign, readwrite, nonatomic) BOOL isDownloading;
 
 @property (copy, nonatomic) NSString *tempFileStorePath;
@@ -119,14 +119,25 @@
     [operation cancel];
 }
 
-- (BOOL)startQueue {
-    if (!self.isDownloading) {
-        // start
-        self.isDownloading = YES;
-        return YES;
-    }
-    return NO;
+- (void)startOperationWithURL:(NSURL *)url {
+    [self startOperation:[self findOperationWithURL:url]];
 }
+- (void)pauseOperationWithURL:(NSURL *)url {
+    [self pauseOperation:[self findOperationWithURL:url]];
+}
+- (void)cancelOperationWithURL:(NSURL *)url {
+    [self cancelOperation:[self findOperationWithURL:url]];
+}
+
+- (RFFileDownloadOperation *)findOperationWithURL:(NSURL *)url {
+    for (RFFileDownloadOperation *operation in self.requrestOperations) {
+        if ([operation.request.URL isEqual:url]) {
+            return operation;
+        }
+    }
+    return nil;
+}
+
 
 @end
 
