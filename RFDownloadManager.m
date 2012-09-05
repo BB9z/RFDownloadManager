@@ -40,6 +40,7 @@
 
 - (RFFileDownloadOperation *)addURL:(NSURL *)url fileStorePath:(NSString *)destinationFilePath {
     if ([self.requrests containsObject:url]) {
+        dout(@"RFDownloadManager: the url already existed. %@", url)
         return nil;
     }
 
@@ -64,17 +65,14 @@
         }];
         
         [downloadOperation setCompletionBlockWithSuccess:^(AFHTTPRequestOperation *operation, id responseObject) {
-            if (self.delegate && [self.delegate respondsToSelector:@selector(RFDownloadManager:operationCompleted::)]) {
-                
-                [self.requrestOperations removeObject:operation];
-                
-                [self.delegate RFDownloadManager:self operationStateUpdate:downloadOperation];
+            [self.requrestOperations removeObject:operation];
+            if (self.delegate && [self.delegate respondsToSelector:@selector(RFDownloadManager:operationCompleted:)]) {
+                [self.delegate RFDownloadManager:self operationCompleted:downloadOperation];
             }
             
         } failure:^(AFHTTPRequestOperation *operation, NSError *error) {
-            if (self.delegate && [self.delegate respondsToSelector:@selector(RFDownloadManager:operationFailed::)]) {
-                
-                [self.delegate RFDownloadManager:self operationStateUpdate:downloadOperation];
+            if (self.delegate && [self.delegate respondsToSelector:@selector(RFDownloadManager:operationFailed:)]) {
+                [self.delegate RFDownloadManager:self operationFailed:downloadOperation];
             }
         }];
         
