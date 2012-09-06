@@ -40,6 +40,11 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(NSInteger bytes
 @synthesize progressiveDownloadProgress = _progressiveDownloadProgress;
 @synthesize userInfo = _userInfo;
 
+- (id)initWithRequest:(NSURLRequest *)urlRequest {
+    NSAssert(false, @"You can`t creat a RFFileDownloadOperation with this method.");
+    return nil;
+}
+
 - (id)initWithRequest:(NSURLRequest *)urlRequest targetPath:(NSString *)targetPath {
     return [self initWithRequest:urlRequest targetPath:targetPath shouldResume:YES shouldCoverOldFile:NO];
 }
