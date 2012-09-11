@@ -2,7 +2,7 @@
 #import "RFDownloadManager.h"
 
 @interface RFDownloadManager ()
-@property (RF_STRONG, atomic) NSMutableArray *requrests;        // 未完成
+@property (RF_STRONG, atomic) NSMutableArray *requrests;
 @property (RF_STRONG, readwrite, atomic) NSMutableArray *requrestOperations;
 @property (assign, readwrite, nonatomic) BOOL isDownloading;
 
@@ -45,42 +45,42 @@
     }
 
     __block RFFileDownloadOperation *downloadOperation = [[RFFileDownloadOperation alloc] initWithRequest:[NSURLRequest requestWithURL:url] targetPath:destinationFilePath shouldResume:YES shouldCoverOldFile:NO];
+    if (downloadOperation == nil) return nil;
     
-    if (downloadOperation) {
-       
-        downloadOperation.deleteTempFileOnCancel = YES;
-        
+    downloadOperation.deleteTempFileOnCancel = YES;
+    
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Warc-retain-cycles"
+    
+    [downloadOperation setProgressiveDownloadProgressBlock:^(NSInteger bytesRead, long long totalBytesRead, long long totalBytesExpected, long long totalBytesReadForFile, long long totalBytesExpectedToReadForFile) {
         
-        [downloadOperation setProgressiveDownloadProgressBlock:^(NSInteger bytesRead, long long totalBytesRead, long long totalBytesExpected, long long totalBytesReadForFile, long long totalBytesExpectedToReadForFile) {
-            
-            //            dout_float(totalBytesExpected)
-            //            dout_float(totalBytesReadForFile)
-            //            dout_float(totalBytesExpectedToReadForFile)
-            
-            if (self.delegate && [self.delegate respondsToSelector:@selector(RFDownloadManager:operationStateUpdate:)]) {
-                [self.delegate RFDownloadManager:self operationStateUpdate:downloadOperation];
-            }
-        }];
+        //            dout_float(totalBytesExpected)
+        //            dout_float(totalBytesReadForFile)
+        //            dout_float(totalBytesExpectedToReadForFile)
         
-        [downloadOperation setCompletionBlockWithSuccess:^(AFHTTPRequestOperation *operation, id responseObject) {
-            [self.requrestOperations removeObject:operation];
-            if (self.delegate && [self.delegate respondsToSelector:@selector(RFDownloadManager:operationCompleted:)]) {
-                [self.delegate RFDownloadManager:self operationCompleted:downloadOperation];
-            }
-            
-        } failure:^(AFHTTPRequestOperation *operation, NSError *error) {
-            if (self.delegate && [self.delegate respondsToSelector:@selector(RFDownloadManager:operationFailed:)]) {
-                [self.delegate RFDownloadManager:self operationFailed:downloadOperation];
-            }
-        }];
+        if (self.delegate && [self.delegate respondsToSelector:@selector(RFDownloadManager:operationStateUpdate:)]) {
+            [self.delegate RFDownloadManager:self operationStateUpdate:downloadOperation];
+        }
+    }];
+    
+    [downloadOperation setCompletionBlockWithSuccess:^(AFHTTPRequestOperation *operation, id responseObject) {
+        if (self.delegate && [self.delegate respondsToSelector:@selector(RFDownloadManager:operationCompleted:)]) {
+            [self.delegate RFDownloadManager:self operationCompleted:downloadOperation];
+        }
+        [self.requrests removeObject:operation.request.URL];
+        [self.requrestOperations removeObject:operation];
         
+    } failure:^(AFHTTPRequestOperation *operation, NSError *error) {
+        if (self.delegate && [self.delegate respondsToSelector:@selector(RFDownloadManager:operationFailed:)]) {
+            [self.delegate RFDownloadManager:self operationFailed:downloadOperation];
+        }
+    }];
+    
 #pragma clang diagnostic pop
-        
-        [self.requrestOperations addObject:downloadOperation];
-        [self.requrests addObject:url];
-    }
+    
+    [self.requrestOperations addObject:downloadOperation];
+    [self.requrests addObject:url];
+    
     return downloadOperation;
 }
 
@@ -124,6 +124,7 @@
         douts(@"RFDownloadManager > cancelOperation: operation is nil")
     }
     [operation cancel];
+    [self.requrests removeObject:operation.request.URL];
 }
 
 - (void)startOperationWithURL:(NSURL *)url {

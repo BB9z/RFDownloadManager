@@ -53,7 +53,7 @@
 + (RFDownloadManager *)sharedInstance;
 
 /**
- 
+    
     返回nil，如果已经包含该url或者创建新对象失败
  */
 - (RFFileDownloadOperation *)addURL:(NSURL *)url fileStorePath:(NSString *)destinationFilePath;
