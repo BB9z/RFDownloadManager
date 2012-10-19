@@ -1,9 +1,9 @@
 
 #import "RFFileDownloadOperation.h"
 #import "AFURLConnectionOperation.h"
-#import <CommonCrypto/CommonDigest.h>
 #include <fcntl.h>
 #include <unistd.h>
+#import "NSFileManager+RFKit.h"
 
 @interface AFURLConnectionOperation (AFInternal)
 @property (nonatomic, strong) NSURLRequest *request;
@@ -11,34 +11,18 @@
 
 @end
 
-typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(NSInteger bytes, long long totalBytes, long long totalBytesExpected, long long totalBytesReadForFile, long long totalBytesExpectedToReadForFile);
-
 @interface RFFileDownloadOperation() {
     NSError *_fileError;
 }
 @property (assign, readwrite) float transmissionSpeed;
-
-@property (readwrite) long long bytesDownloaded;
-@property (readwrite) long long bytesFileSize;
-
 @property (nonatomic, strong) NSString *tempPath;
-
 @property (assign) long long totalContentLength;
 @property (assign) long long offsetContentLength;
-@property (nonatomic, copy) AFURLConnectionProgressiveOperationProgressBlock progressiveDownloadProgress;
+@property (nonatomic, copy) void (^progressiveDownloadProgressBlock)(NSInteger bytesRead, long long totalBytesRead, long long totalBytesExpected, long long totalBytesReadForFile, long long totalBytesExpectedToReadForFile);
 @end
 
 
 @implementation RFFileDownloadOperation
-
-@synthesize targetPath = _targetPath;
-@synthesize tempPath = _tempPath;
-@synthesize totalContentLength = _totalContentLength;
-@synthesize offsetContentLength = _offsetContentLength;
-@synthesize shouldResume = _shouldResume;
-@synthesize deleteTempFileOnCancel = _deleteTempFileOnCancel;
-@synthesize progressiveDownloadProgress = _progressiveDownloadProgress;
-@synthesize userInfo = _userInfo;
 
 - (id)initWithRequest:(NSURLRequest *)urlRequest {
     NSAssert(false, @"You can`t creat a RFFileDownloadOperation with this method.");
@@ -46,72 +30,70 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(NSInteger bytes
 }
 
 - (id)initWithRequest:(NSURLRequest *)urlRequest targetPath:(NSString *)targetPath {
-    return [self initWithRequest:urlRequest targetPath:targetPath shouldResume:YES shouldCoverOldFile:NO];
+    return [self initWithRequest:urlRequest targetPath:targetPath shouldCoverOldFile:NO];
 }
 
-- (id)initWithRequest:(NSURLRequest *)urlRequest targetPath:(NSString *)targetPath shouldResume:(BOOL)shouldResume shouldCoverOldFile:(BOOL)shouldCoverOldFile {
+- (id)initWithRequest:(NSURLRequest *)urlRequest targetPath:(NSString *)targetPath  shouldCoverOldFile:(BOOL)shouldCoverOldFile {
+    NSParameterAssert(urlRequest != nil && targetPath.length > 0);
     
-    if ((self = [super initWithRequest:urlRequest])) {
-        NSParameterAssert(targetPath != nil && urlRequest != nil);
-        
-        // Check target path
-        NSString *destinationPath = nil;
-        
-        // we assume that at least the directory has to exist on the targetPath
-        BOOL isDirectory;
-        if(![[NSFileManager defaultManager] fileExistsAtPath:targetPath isDirectory:&isDirectory]) {
-            isDirectory = NO;
-        }
-        // if targetPath is a directory, use the file name we got from the urlRequest.
-        if (isDirectory) {
-            NSString *fileName = [urlRequest.URL lastPathComponent];
-            NSAssert(fileName.length > 0, @"Cannot decide file name.");
-            destinationPath = [NSString pathWithComponents:[NSArray arrayWithObjects:targetPath, fileName, nil]];
-        }
-        else {
-            destinationPath = targetPath;
-        }
-        
-        if (!shouldCoverOldFile && [[NSFileManager defaultManager] fileExistsAtPath:destinationPath]) {
-            douts(@"RFFileDownloadOperation: File already exist.")
-            return nil;
-        }
-
-        _shouldResume = shouldResume;
-        
-        _targetPath = destinationPath;
-        
-        // download is saved into a temporal file and remaned upon completion
-        NSString *tempPath = [self tempPath];
-        
-        // do we need to resume the file?
-        BOOL isResuming = NO;
-        if (shouldResume) {
-            unsigned long long downloadedBytes = [self fileSizeForPath:tempPath];
-            if (downloadedBytes > 0) {
-                NSMutableURLRequest *mutableURLRequest = [urlRequest mutableCopy];
-                NSString *requestRange = [NSString stringWithFormat:@"bytes=%llu-", downloadedBytes];
-                [mutableURLRequest setValue:requestRange forHTTPHeaderField:@"Range"];
-                self.request = mutableURLRequest;
-                isResuming = YES;
-            }
-        }
-        
-        // try to create/open a file at the target location
-        if (!isResuming) {
-            int fileDescriptor = open([tempPath UTF8String], O_CREAT | O_EXCL | O_RDWR, 0666);
-            if (fileDescriptor > 0) {
-                close(fileDescriptor);
-            }
-        }
-        
-        self.outputStream = [NSOutputStream outputStreamToFileAtPath:tempPath append:isResuming];
-        
-        // if the output stream can't be created, instantly destroy the object.
-        if (!self.outputStream) {
-            return nil;
+    if (!(self = [super initWithRequest:urlRequest])) {
+        return nil;
+    }
+    
+    // Check target path
+    NSString *destinationPath = nil;
+    
+    // we assume that at least the directory has to exist on the targetPath
+    BOOL isDirectory;
+    if(![[NSFileManager defaultManager] fileExistsAtPath:targetPath isDirectory:&isDirectory]) {
+        isDirectory = NO;
+    }
+    // if targetPath is a directory, use the file name we got from the urlRequest.
+    if (isDirectory) {
+        NSString *fileName = [urlRequest.URL lastPathComponent];
+        NSAssert(fileName.length > 0, @"Cannot decide file name.");
+        destinationPath = [NSString pathWithComponents:[NSArray arrayWithObjects:targetPath, fileName, nil]];
+    }
+    else {
+        destinationPath = targetPath;
+    }
+    
+    if (!shouldCoverOldFile && [[NSFileManager defaultManager] fileExistsAtPath:destinationPath]) {
+        dout_warning(@"RFFileDownloadOperation: File already exist.")
+        return nil;
+    }
+    
+    _targetPath = destinationPath;
+    
+    // download is saved into a temporal file and remaned upon completion
+    NSString *tempPath = [self tempPath];
+    
+    // do we need to resume the file?
+    BOOL isResuming = NO;
+    
+    unsigned long long downloadedBytes = [[NSFileManager defaultManager] fileSizeForPath:tempPath];
+    if (downloadedBytes > 0) {
+        NSMutableURLRequest *mutableURLRequest = [urlRequest mutableCopy];
+        NSString *requestRange = [NSString stringWithFormat:@"bytes=%llu-", downloadedBytes];
+        [mutableURLRequest setValue:requestRange forHTTPHeaderField:@"Range"];
+        self.request = mutableURLRequest;
+        isResuming = YES;
+    }
+    
+    // try to create/open a file at the target location
+    if (!isResuming) {
+        int fileDescriptor = open([tempPath UTF8String], O_CREAT | O_EXCL | O_RDWR, 0666);
+        if (fileDescriptor > 0) {
+            close(fileDescriptor);
         }
     }
+    
+    self.outputStream = [NSOutputStream outputStreamToFileAtPath:tempPath append:isResuming];
+    if (!self.outputStream) {
+        dout_error(@"Output stream can't be created");
+        return nil;
+    }
+    
     return self;
 }
 
@@ -119,7 +101,7 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(NSInteger bytes
     dout(@"dealloc: %@", self)
 }
 
-#pragma mark - Static
+#pragma mark - Path
 
 + (NSString *)cacheFolder {
     static NSString *cacheFolder;
@@ -131,37 +113,20 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(NSInteger bytes
         // ensure all cache directories are there (needed only once)
         NSError *error = nil;
         if(![[NSFileManager new] createDirectoryAtPath:cacheFolder withIntermediateDirectories:YES attributes:nil error:&error]) {
-            NSLog(@"Failed to create cache directory at %@", cacheFolder);
+            dout_error(@"Failed to create cache directory at %@", cacheFolder);
         }
     });
     return cacheFolder;
 }
 
-// calculates the MD5 hash of a key
-+ (NSString *)md5StringForString:(NSString *)string {
-    const char *str = [string UTF8String];
-    unsigned char r[CC_MD5_DIGEST_LENGTH];
-    CC_MD5(str, strlen(str), r);
-    return [NSString stringWithFormat:@"%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
-            r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7], r[8], r[9], r[10], r[11], r[12], r[13], r[14], r[15]];
-}
-
-#pragma mark - Private
-
-- (unsigned long long)fileSizeForPath:(NSString *)path {
-    signed long long fileSize = 0;
-    NSFileManager *fileManager = [NSFileManager new]; // not thread safe
-    if ([[NSFileManager new] fileExistsAtPath:path]) {
-        NSError *error = nil;
-        NSDictionary *fileDict = [fileManager attributesOfItemAtPath:path error:&error];
-        if (!error && fileDict) {
-            fileSize = [fileDict fileSize];
-        }
+- (NSString *)tempPath {
+    NSString *tempPath = nil;
+    if (self.targetPath) {
+        NSString *md5URLString = [NSString MD5String:self.targetPath];
+        tempPath = [[[self class] cacheFolder] stringByAppendingPathComponent:md5URLString];
     }
-    return fileSize;
+    return tempPath;
 }
-
-#pragma mark - Public
 
 - (BOOL)deleteTempFileWithError:(NSError **)error {
     NSFileManager *fileManager = [NSFileManager new];
@@ -173,20 +138,6 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(NSInteger bytes
         }
     }
     return success;
-}
-
-- (NSString *)tempPath {
-    NSString *tempPath = nil;
-    if (self.targetPath) {
-        NSString *md5URLString = [[self class] md5StringForString:self.targetPath];
-        tempPath = [[[self class] cacheFolder] stringByAppendingPathComponent:md5URLString];
-    }
-    return tempPath;
-}
-
-
-- (void)setProgressiveDownloadProgressBlock:(void (^)(NSInteger bytesRead, long long totalBytesRead, long long totalBytesExpected, long long totalBytesReadForFile, long long totalBytesExpectedToReadForFile))block {
-    self.progressiveDownloadProgress = block;
 }
 
 #pragma mark - AFURLRequestOperation
@@ -278,21 +229,24 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(NSInteger bytes
     [self.outputStream setProperty:[NSNumber numberWithLongLong:_offsetContentLength] forKey:NSStreamFileCurrentOffsetKey];
 }
 
+- (long long)bytesDownloaded {
+    return self.totalBytesRead + self.offsetContentLength;
+}
+
+- (long long)bytesFileSize {
+    return self.totalContentLength;
+}
+
 - (void)connection:(NSURLConnection *)connection didReceiveData:(NSData *)data  {
     [super connection:connection didReceiveData:data];
     
-    self.bytesFileSize = self.totalContentLength;
-    self.bytesDownloaded = self.totalBytesRead + self.offsetContentLength;
-    
-    if (self.progressiveDownloadProgress) {
-        self.progressiveDownloadProgress((long long)[data length],
+    if (self.progressiveDownloadProgressBlock) {
+        self.progressiveDownloadProgressBlock((long long)[data length],
                                          self.totalBytesRead,
                                          self.response.expectedContentLength,
                                          self.totalBytesRead + self.offsetContentLength,
                                          self.totalContentLength);
     }
 }
-
-
 
 @end

@@ -51,12 +51,6 @@
  */
 @property (strong) NSString *targetPath;
 
-/**
- A Boolean value that indicates if we should try to resume the download. Defaults is `YES`.
- 
- Can only be set while creating the request.
- */
-@property (assign, readonly) BOOL shouldResume;
 
 /// Default NO
 @property (assign, nonatomic) BOOL shouldCoverOldFile;
@@ -81,13 +75,14 @@
 @property (assign, readonly) long long offsetContentLength;
 
 // 未完成
-@property (readonly) float transmissionSpeed;
+- (float)transmissionSpeed;
 
 /// 已下载大小
-@property (readonly) long long bytesDownloaded;
+- (long long)bytesDownloaded;
 
 /// 文件大小
-@property (readonly) long long bytesFileSize;
+- (long long)bytesFileSize;
+
 //  其他信息
 @property (strong, readwrite) NSDictionary *userInfo;
 
@@ -95,11 +90,10 @@
  Creates and returns an `AFDownloadRequestOperation`
  @param urlRequest The request object to be loaded asynchronously during execution of the operation
  @param targetPath The target path (with or without file name)
- @param shouldResume If YES, tries to resume a partial download if found.
- @param shouldCoverOldFile 
+ @param shouldCoverOldFile If YES, will cover file ex.
  @return A new download request operation
  */
-- (id)initWithRequest:(NSURLRequest *)urlRequest targetPath:(NSString *)targetPath shouldResume:(BOOL)shouldResume shouldCoverOldFile:(BOOL)shouldCoverOldFile;
+- (id)initWithRequest:(NSURLRequest *)urlRequest targetPath:(NSString *)targetPath  shouldCoverOldFile:(BOOL)shouldCoverOldFile;
 
 - (id)initWithRequest:(NSURLRequest *)urlRequest targetPath:(NSString *)targetPath;
 

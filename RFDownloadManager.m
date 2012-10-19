@@ -40,12 +40,14 @@
 
 - (RFFileDownloadOperation *)addURL:(NSURL *)url fileStorePath:(NSString *)destinationFilePath {
     if ([self.requrests containsObject:url]) {
-        dout(@"RFDownloadManager: the url already existed. %@", url)
+        dout_warning(@"RFDownloadManager: the url already existed. %@", url)
         return nil;
     }
 
-    __block RFFileDownloadOperation *downloadOperation = [[RFFileDownloadOperation alloc] initWithRequest:[NSURLRequest requestWithURL:url] targetPath:destinationFilePath shouldResume:YES shouldCoverOldFile:NO];
-    if (downloadOperation == nil) return nil;
+    __block RFFileDownloadOperation *downloadOperation = [[RFFileDownloadOperation alloc] initWithRequest:[NSURLRequest requestWithURL:url] targetPath:destinationFilePath shouldCoverOldFile:YES];
+    if (downloadOperation == nil) {
+        return nil;
+    }
     
     downloadOperation.deleteTempFileOnCancel = YES;
     
@@ -53,10 +55,6 @@
 #pragma clang diagnostic ignored "-Warc-retain-cycles"
     
     [downloadOperation setProgressiveDownloadProgressBlock:^(NSInteger bytesRead, long long totalBytesRead, long long totalBytesExpected, long long totalBytesReadForFile, long long totalBytesExpectedToReadForFile) {
-        
-        //            dout_float(totalBytesExpected)
-        //            dout_float(totalBytesReadForFile)
-        //            dout_float(totalBytesExpectedToReadForFile)
         
         if (self.delegate && [self.delegate respondsToSelector:@selector(RFDownloadManager:operationStateUpdate:)]) {
             [self.delegate RFDownloadManager:self operationStateUpdate:downloadOperation];
