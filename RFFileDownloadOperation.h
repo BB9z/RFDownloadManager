@@ -52,7 +52,7 @@
 @property (strong) NSString *targetPath;
 
 
-/// Default NO
+/// Default YES
 @property (assign, nonatomic) BOOL shouldCoverOldFile;
 
 

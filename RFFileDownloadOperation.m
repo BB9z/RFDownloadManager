@@ -30,7 +30,7 @@
 }
 
 - (id)initWithRequest:(NSURLRequest *)urlRequest targetPath:(NSString *)targetPath {
-    return [self initWithRequest:urlRequest targetPath:targetPath shouldCoverOldFile:NO];
+    return [self initWithRequest:urlRequest targetPath:targetPath shouldCoverOldFile:YES];
 }
 
 - (id)initWithRequest:(NSURLRequest *)urlRequest targetPath:(NSString *)targetPath  shouldCoverOldFile:(BOOL)shouldCoverOldFile {
@@ -58,6 +58,7 @@
         destinationPath = targetPath;
     }
     
+    self.shouldCoverOldFile = shouldCoverOldFile;
     if (!shouldCoverOldFile && [[NSFileManager defaultManager] fileExistsAtPath:destinationPath]) {
         dout_warning(@"RFFileDownloadOperation: File already exist.")
         return nil;
@@ -93,7 +94,7 @@
         dout_error(@"Output stream can't be created");
         return nil;
     }
-    
+
     return self;
 }
 
@@ -165,6 +166,9 @@
                 NSFileManager *fm = [NSFileManager new];
                 if (self.shouldCoverOldFile && [fm fileExistsAtPath:_targetPath]) {
                     [fm removeItemAtPath:_targetPath error:&localError];
+                    if (localError) {
+                        dout_error(@"Can`t remove exist file.");
+                    }
                 }
                 if (localError) {
                     _fileError = localError;
