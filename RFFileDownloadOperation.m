@@ -17,6 +17,7 @@
 @property (assign, readwrite) float transmissionSpeed;
 @property (nonatomic, strong) NSString *tempPath;
 @property (assign) long long totalContentLength;
+@property (nonatomic, assign) long long totalBytesReadPerDownload;
 @property (assign) long long offsetContentLength;
 @property (nonatomic, copy) void (^progressiveDownloadProgressBlock)(NSInteger bytesRead, long long totalBytesRead, long long totalBytesExpected, long long totalBytesReadForFile, long long totalBytesExpectedToReadForFile);
 @end
@@ -160,7 +161,8 @@
             }
             return;
         }
-        else {
+        // loss of network connections = error set, but not cancel
+        else if (!self.error) {
             // move file to final position and capture error
             @synchronized(self) {
                 NSFileManager *fm = [NSFileManager new];
@@ -228,13 +230,14 @@
         }
     }
     
+    self.totalBytesReadPerDownload = 0;
     self.offsetContentLength = MAX(fileOffset, 0);
     self.totalContentLength = totalContentLength;
     [self.outputStream setProperty:[NSNumber numberWithLongLong:_offsetContentLength] forKey:NSStreamFileCurrentOffsetKey];
 }
 
 - (long long)bytesDownloaded {
-    return self.totalBytesRead + self.offsetContentLength;
+    return self.totalBytesReadPerDownload + self.offsetContentLength;
 }
 
 - (long long)bytesFileSize {
@@ -244,12 +247,17 @@
 - (void)connection:(NSURLConnection *)connection didReceiveData:(NSData *)data  {
     [super connection:connection didReceiveData:data];
     
+    // track custom bytes read because totalBytesRead persists between pause/resume.
+    self.totalBytesReadPerDownload += [data length];
+
     if (self.progressiveDownloadProgressBlock) {
-        self.progressiveDownloadProgressBlock((long long)[data length],
-                                         self.totalBytesRead,
-                                         self.response.expectedContentLength,
-                                         self.totalBytesRead + self.offsetContentLength,
-                                         self.totalContentLength);
+        self.progressiveDownloadProgressBlock(
+            (long long)[data length],
+            self.totalBytesRead,
+            self.response.expectedContentLength,
+            self.totalBytesReadPerDownload + self.offsetContentLength,
+            self.totalContentLength
+        );
     }
 }
 
