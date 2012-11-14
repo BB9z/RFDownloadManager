@@ -98,8 +98,7 @@
         [self.requrestOperationsDownloading removeObject:operation];
         if (self.requrestOperationsQueue.count > 0) {
             RFFileDownloadOperation *operationNext = [self.requrestOperationsQueue anyObject];
-            [self.requrestOperationsDownloading addObject:operationNext];
-            [self.requrestOperationsQueue removeObject:operationNext];
+            [self startOperation:operationNext];
         }
 
     } failure:^(RFFileDownloadOperation *operation, NSError *error) {
