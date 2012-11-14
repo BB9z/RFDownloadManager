@@ -31,15 +31,25 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-
+#import "RFRuntime.h"
 #import "AFHTTPRequestOperation.h"
 
 #define kAFNetworkingIncompleteDownloadFolderName @"Incomplete"
 
-/**
- `AFDownloadRequestOperation` is a subclass of `AFHTTPRequestOperation` for streamed file downloading. Supports Content-Range. (http://tools.ietf.org/html/rfc2616#section-14.16)
- */
+
+/// `AFDownloadRequestOperation` is a subclass of `AFHTTPRequestOperation` for streamed file downloading. Supports Content-Range. (http://tools.ietf.org/html/rfc2616#section-14.16)
 @interface RFFileDownloadOperation : AFHTTPRequestOperation
+
+#pragma mark -
+/**
+ Creates and returns an `AFDownloadRequestOperation`
+ @param urlRequest The request object to be loaded asynchronously during execution of the operation
+ @param targetPath The target path (with or without file name)
+ @param shouldCoverOldFile If YES, will cover file ex.
+ @return A new download request operation
+ */
+- (id)initWithRequest:(NSURLRequest *)urlRequest targetPath:(NSString *)targetPath  shouldCoverOldFile:(BOOL)shouldCoverOldFile;
+- (id)initWithRequest:(NSURLRequest *)urlRequest targetPath:(NSString *)targetPath;
 
 /**
  A String value that defines the target path or directory.
@@ -49,66 +59,31 @@
  
  If the target is a directory, we use the last part of the URL as a default file name.
  */
-@property (strong) NSString *targetPath;
-
+@property (RF_STRONG) NSString *targetPath;
 
 /// Default YES
 @property (assign, nonatomic) BOOL shouldCoverOldFile;
 
+#pragma mark - Status
 
-/**
- Deletes the temporary file if operations is cancelled. Defaults to `NO`.
- */
-@property (assign, getter=isDeletingTempFileOnCancel) BOOL deleteTempFileOnCancel;
-
-
-/**
- Expected total length. This is different than expectedContentLength if the file is resumed.
- 
- Note: this can also be zero if the file size is not sent (*)
- */
-@property (assign, readonly) long long totalContentLength;
-
-/**
- Indicator for the file offset on partial downloads. This is greater than zero if the file download is resumed.
- */
-@property (assign, readonly) long long offsetContentLength;
-
-// 未完成
-- (float)transmissionSpeed;
+/// 文件大小
+/// Expected total length. This is different than expectedContentLength if the file is resumed.
+/// Note: this can also be zero if the file size is not sent (*)
+- (long long)bytesFileSize;
 
 /// 已下载大小
 - (long long)bytesDownloaded;
 
-/// 文件大小
-- (long long)bytesFileSize;
+/// 下载速度/每秒
+- (float)transmissionSpeed;
+
+/// Indicator for the file offset on partial downloads. This is greater than zero if the file download is resumed.
+@property (assign, readonly) long long offsetContentLength;
+
+@property (assign, nonatomic) NSTimeInterval stausRefreshTimeInterval;
 
 //  其他信息
-@property (strong, readwrite) NSDictionary *userInfo;
-
-/**
- Creates and returns an `AFDownloadRequestOperation`
- @param urlRequest The request object to be loaded asynchronously during execution of the operation
- @param targetPath The target path (with or without file name)
- @param shouldCoverOldFile If YES, will cover file ex.
- @return A new download request operation
- */
-- (id)initWithRequest:(NSURLRequest *)urlRequest targetPath:(NSString *)targetPath  shouldCoverOldFile:(BOOL)shouldCoverOldFile;
-
-- (id)initWithRequest:(NSURLRequest *)urlRequest targetPath:(NSString *)targetPath;
-
-
-/**
- Deletes the temporary file.
- 
- Returns `NO` if an error happened, `YES` if the file is removed or did not exist in the first place.
- */
-- (BOOL)deleteTempFileWithError:(NSError **)error;
-
-/**
- Returns the path used for the temporary file. Returns `nil` if the targetPath has not been set.
- */
-- (NSString *)tempPath;
+@property (RF_STRONG, readwrite) NSDictionary *userInfo;
 
 /**
  Sets a callback to be called when an undetermined number of bytes have been downloaded from the server. This is a variant of setDownloadProgressBlock that adds support for progressive downloads and adds the
@@ -118,5 +93,19 @@
  @see setDownloadProgressBlock
  */
 - (void)setProgressiveDownloadProgressBlock:(void (^)(NSInteger bytesRead, long long totalBytesRead, long long totalBytesExpected, long long totalBytesReadForFile, long long totalBytesExpectedToReadForFile))block;
+
+- (void)setCompletionBlockWithSuccess:(void (^)(RFFileDownloadOperation *operation, id responseObject))success failure:(void (^)(RFFileDownloadOperation *operation, NSError *error))failure;
+
+#pragma mark - Temp file
+
+/// Deletes the temporary file if operations is cancelled. Defaults to `NO`.
+@property (assign, getter=isDeletingTempFileOnCancel) BOOL deleteTempFileOnCancel;
+
+/// Deletes the temporary file.
+/// Returns `NO` if an error happened, `YES` if the file is removed or did not exist in the first place.
+- (BOOL)deleteTempFileWithError:(NSError **)error;
+
+/// Returns the path used for the temporary file. Returns `nil` if the targetPath has not been set.
+- (NSString *)tempPath;
 
 @end

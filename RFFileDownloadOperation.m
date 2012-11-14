@@ -4,22 +4,26 @@
 #include <fcntl.h>
 #include <unistd.h>
 #import "NSFileManager+RFKit.h"
+#import "NSString+RFKit.h"
+#import "dout.h"
 
 @interface AFURLConnectionOperation (AFInternal)
-@property (nonatomic, strong) NSURLRequest *request;
-@property (readonly, nonatomic, assign) long long totalBytesRead;
+@property (RF_STRONG, nonatomic) NSURLRequest *request;
+@property (assign, readonly, nonatomic) long long totalBytesRead;
 
 @end
 
 @interface RFFileDownloadOperation() {
     NSError *_fileError;
 }
+@property (RF_STRONG, nonatomic) NSTimer *stausRefreshTimer;
 @property (assign, readwrite) float transmissionSpeed;
-@property (nonatomic, strong) NSString *tempPath;
+@property (RF_STRONG, nonatomic) NSString *tempPath;
 @property (assign) long long totalContentLength;
-@property (nonatomic, assign) long long totalBytesReadPerDownload;
+@property (assign, nonatomic) long long totalBytesReadPerDownload;
+@property (assign, nonatomic) long long lastTotalBytesReadPerDownload;
 @property (assign) long long offsetContentLength;
-@property (nonatomic, copy) void (^progressiveDownloadProgressBlock)(NSInteger bytesRead, long long totalBytesRead, long long totalBytesExpected, long long totalBytesReadForFile, long long totalBytesExpectedToReadForFile);
+@property (copy, nonatomic) void (^progressiveDownloadProgressBlock)(NSInteger bytesRead, long long totalBytesRead, long long totalBytesExpected, long long totalBytesReadForFile, long long totalBytesExpectedToReadForFile);
 @end
 
 
@@ -61,7 +65,7 @@
     
     self.shouldCoverOldFile = shouldCoverOldFile;
     if (!shouldCoverOldFile && [[NSFileManager defaultManager] fileExistsAtPath:destinationPath]) {
-        dout_warning(@"RFFileDownloadOperation: File already exist.")
+        dout_warning(@"RFFileDownloadOperation: File already exist.");
         return nil;
     }
     
@@ -96,11 +100,63 @@
         return nil;
     }
 
+    // defalut
+    self.stausRefreshTimeInterval = 1;
+    
     return self;
 }
 
 - (void)dealloc {
-    dout(@"dealloc: %@", self)
+    dout(@"dealloc: %@", self);
+}
+
+#pragma mark - Control
+- (void)start {
+    [super start];
+    [self activeStausRefreshTimer];
+}
+
+- (void)resume {
+    [super resume];
+    [self activeStausRefreshTimer];
+}
+
+- (void)pause {
+    [super pause];
+    [self deactiveStausRefreshTimer];
+}
+
+- (void)cancel {
+    [super cancel];
+    [self deactiveStausRefreshTimer];
+}
+
+- (void)activeStausRefreshTimer {
+    if (!self.stausRefreshTimer) {
+        self.stausRefreshTimer = [NSTimer scheduledTimerWithTimeInterval:self.stausRefreshTimeInterval target:self selector:@selector(stausRefresh) userInfo:nil repeats:YES];
+        
+        self.transmissionSpeed = 0;
+    }
+}
+
+- (void)deactiveStausRefreshTimer {
+    if (self.stausRefreshTimer) {
+        [self.stausRefreshTimer invalidate];
+        self.stausRefreshTimer = nil;
+        
+        self.transmissionSpeed = 0;
+    }
+}
+
+- (void)stausRefresh {
+    self.transmissionSpeed = (self.totalBytesReadPerDownload - self.lastTotalBytesReadPerDownload)/self.stausRefreshTimeInterval;
+    self.lastTotalBytesReadPerDownload = self.totalBytesReadPerDownload;
+    if (self.transmissionSpeed < 0) {
+        dout_float(self.lastTotalBytesReadPerDownload)
+        dout_float(self.totalBytesReadPerDownload)
+        self.transmissionSpeed = 0;
+    }
+    _dout_float(self.transmissionSpeed)
 }
 
 #pragma mark - Path
@@ -144,8 +200,8 @@
 
 #pragma mark - AFURLRequestOperation
 
-- (void)setCompletionBlockWithSuccess:(void (^)(AFHTTPRequestOperation *operation, id responseObject))success
-                              failure:(void (^)(AFHTTPRequestOperation *operation, NSError *error))failure
+- (void)setCompletionBlockWithSuccess:(void (^)(RFFileDownloadOperation *operation, id responseObject))success
+                              failure:(void (^)(RFFileDownloadOperation *operation, NSError *error))failure
 {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Warc-retain-cycles"
@@ -193,6 +249,8 @@
                 success(self, _targetPath);
             });
         }
+        
+        [self deactiveStausRefreshTimer];
     };
 #pragma clang diagnostic pop
 }
@@ -231,6 +289,7 @@
     }
     
     self.totalBytesReadPerDownload = 0;
+    self.lastTotalBytesReadPerDownload = 0;
     self.offsetContentLength = MAX(fileOffset, 0);
     self.totalContentLength = totalContentLength;
     [self.outputStream setProperty:[NSNumber numberWithLongLong:_offsetContentLength] forKey:NSStreamFileCurrentOffsetKey];
