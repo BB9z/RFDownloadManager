@@ -115,19 +115,25 @@
 }
 
 - (void)startAll {
-    for (RFFileDownloadOperation *operation in self.requrestOperationsQueue) {
-        if (self.requrestOperationsDownloading.count < _maxRunningTaskCount) {
+    while (self.requrestOperationsDownloading.count < _maxRunningTaskCount) {
+        RFFileDownloadOperation *operation = [self.requrestOperationsQueue anyObject];
+        if (!operation) break;
+        
             [self startOperation:operation];
         }
     }
-}
 - (void)pauseAll {
-    for (RFFileDownloadOperation *operation in self.requrestOperationsDownloading) {
+    RFFileDownloadOperation *operation;
+    while ((operation = [self.requrestOperationsDownloading anyObject])) {
         [self pauseOperation:operation];
     }
 }
 - (void)cancelAll {
-    for (RFFileDownloadOperation *operation in self.requrestOperationsQueue) {
+    RFFileDownloadOperation *operation;
+    while ((operation = [self.requrestOperationsDownloading anyObject])) {
+        [self cancelOperation:operation];
+    }
+    while ((operation = [self.requrestOperationsQueue anyObject])) {
         [self cancelOperation:operation];
     }
 }
