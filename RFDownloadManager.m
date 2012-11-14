@@ -6,6 +6,7 @@
 @property (RF_STRONG, atomic) NSMutableSet *requrestURLs;
 @property (RF_STRONG, atomic) NSMutableSet *requrestOperationsQueue;
 @property (RF_STRONG, atomic) NSMutableSet *requrestOperationsDownloading;
+@property (RF_STRONG, atomic) NSMutableSet *requrestOperationsPaused;
 
 @property (assign, readwrite, nonatomic) BOOL isDownloading;
 @property (copy, nonatomic) NSString *tempFileStorePath;
@@ -13,12 +14,12 @@
 
 @implementation RFDownloadManager
 - (NSString *)description {
-    return [NSString stringWithFormat:@"<%@: %p, downloading:%@, queue:%@>", [self class], self, self.requrestOperationsDownloading, self.requrestOperationsQueue];
+    return [NSString stringWithFormat:@"<%@: %p, downloading:%@, queue:%@, paused:%@>", [self class], self, self.requrestOperationsDownloading, self.requrestOperationsQueue, self.requrestOperationsPaused];
 }
 
 #pragma mark - Property
 - (NSSet *)operations {
-    return [self.requrestOperationsDownloading setByAddingObjectsFromSet:self.requrestOperationsQueue];
+    return [[self.requrestOperationsDownloading setByAddingObjectsFromSet:self.requrestOperationsQueue] setByAddingObjectsFromSet:self.requrestOperationsPaused];
 }
 
 - (NSSet *)downloadingOperations {
@@ -36,6 +37,7 @@
         _requrestURLs = [NSMutableSet set];
         _requrestOperationsQueue = [NSMutableSet set];
         _requrestOperationsDownloading = [NSMutableSet setWithCapacity:5];
+        _requrestOperationsPaused = [NSMutableSet set];
         _maxRunningTaskCount = 3;
         return self;
     }
@@ -78,6 +80,7 @@
     return downloadOperation;
 }
 
+// TODO: 破除反复重试
 - (void)setupDownloadOperation:(RFFileDownloadOperation *)downloadOperation {
     __weak RFFileDownloadOperation *operation = downloadOperation;
     operation.deleteTempFileOnCancel = YES;
@@ -96,10 +99,7 @@
         // 完成，尝试下载下一个
         [self.requrestURLs removeObject:operation.request.URL];
         [self.requrestOperationsDownloading removeObject:operation];
-        if (self.requrestOperationsQueue.count > 0) {
-            RFFileDownloadOperation *operationNext = [self.requrestOperationsQueue anyObject];
-            [self startOperation:operationNext];
-        }
+        [self startNextQueuedOperation];
 
     } failure:^(RFFileDownloadOperation *operation, NSError *error) {
         if (self.delegate && [self.delegate respondsToSelector:@selector(RFDownloadManager:operationFailed:)]) {
@@ -108,12 +108,17 @@
         // 回退回队列
         // TODO: 破除反复重试
         [self.requrestOperationsDownloading removeObject:operation];
-        [self.requrestOperationsQueue addObject:operation];
+        [self.requrestOperationsPaused addObject:operation];
         dout_error(@"%@", operation.error);
     }];
 }
 
 - (void)startAll {
+    // Paused => Queue
+    [self.requrestOperationsQueue unionSet:self.requrestOperationsPaused];
+    [self.requrestOperationsPaused removeAllObjects];
+    
+    // Queue => Start
     while (self.requrestOperationsDownloading.count < _maxRunningTaskCount) {
         RFFileDownloadOperation *operation = [self.requrestOperationsQueue anyObject];
         if (!operation) break;
@@ -123,9 +128,14 @@
 }
 - (void)pauseAll {
     RFFileDownloadOperation *operation;
+    // Downloading => Pause
     while ((operation = [self.requrestOperationsDownloading anyObject])) {
         [self pauseOperation:operation];
     }
+    
+    // Queue => Pause
+    [self.requrestOperationsPaused unionSet:self.requrestOperationsQueue];
+    [self.requrestOperationsQueue removeAllObjects];
 }
 - (void)cancelAll {
     RFFileDownloadOperation *operation;
@@ -135,32 +145,36 @@
     while ((operation = [self.requrestOperationsQueue anyObject])) {
         [self cancelOperation:operation];
     }
+    while ((operation = [self.requrestOperationsPaused anyObject])) {
+        [self cancelOperation:operation];
+    }
 }
 
+// Note: 这些方法本身会管理队列
 - (void)startOperation:(RFFileDownloadOperation *)operation {
     if (!operation) {
         dout_warning(@"RFDownloadManager > startOperation: operation is nil")
         return;
     }
     
-    if ([operation isPaused]) {
-        [operation resume];
-    }
-    else {
-        [operation start];
-    }
-    
-    if (self.requrestOperationsDownloading.count >= self.maxRunningTaskCount) {
-        RFFileDownloadOperation *anyObject = [self.requrestOperationsDownloading anyObject];
-        RFAssert(anyObject != operation, @"operation already in requrestOperationsDownloading");
+    if (self.requrestOperationsDownloading.count < self.maxRunningTaskCount) {
+        // 开始下载
+        if ([operation isPaused]) {
+            [operation resume];
+        }
+        else {
+            [operation start];
+        }
         
-        [self pauseOperation:anyObject];
-    }
-    
-    if ([self.requrestOperationsQueue containsObject:operation]) {
         [self.requrestOperationsDownloading addObject:operation];
         [self.requrestOperationsQueue removeObject:operation];
     }
+    else {
+        // 加入到队列
+        [self.requrestOperationsQueue addObject:operation];
+    }
+    
+    [self.requrestOperationsPaused removeObject:operation];
 }
 - (void)pauseOperation:(RFFileDownloadOperation *)operation {
     if (!operation) {
@@ -169,9 +183,12 @@
     }
     if (![operation isPaused]) {
         [operation pause];
-        [self.requrestOperationsQueue addObject:operation];
-        [self.requrestOperationsDownloading removeObject:operation];
+        [self startNextQueuedOperation];
     }
+    
+    [self.requrestOperationsPaused addObject:operation];
+    [self.requrestOperationsQueue removeObject:operation];
+    [self.requrestOperationsDownloading removeObject:operation];
 }
 - (void)cancelOperation:(RFFileDownloadOperation *)operation {
     if (!operation) {
@@ -179,9 +196,17 @@
         return;
     }
     [operation cancel];
+    
     [self.requrestURLs removeObject:operation.request.URL];
     [self.requrestOperationsDownloading removeObject:operation];
     [self.requrestOperationsQueue removeObject:operation];
+    [self.requrestOperationsPaused removeObject:operation];
+}
+- (void)startNextQueuedOperation {
+    if (self.requrestOperationsQueue.count > 0) {
+        RFFileDownloadOperation *operationNext = [self.requrestOperationsQueue anyObject];
+        [self startOperation:operationNext];
+    }
 }
 
 - (void)startOperationWithURL:(NSURL *)url {
@@ -205,6 +230,14 @@
     
     if (!operation) {
         for (operation in self.requrestOperationsQueue) {
+            if ([operation.request.URL.path isEqualToString:url.path]) {
+                return operation;
+            }
+        }
+    }
+    
+    if (!operation) {
+        for (operation in self.requrestOperationsPaused) {
             if ([operation.request.URL.path isEqualToString:url.path]) {
                 return operation;
             }
