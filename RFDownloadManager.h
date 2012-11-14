@@ -14,7 +14,7 @@
  
  */
 
-#import <Foundation/Foundation.h>
+#import "RFRuntime.h"
 #import "RFFileDownloadOperation.h"
 
 @class RFDownloadManager;
@@ -34,18 +34,16 @@
 
 @interface RFDownloadManager : NSObject
 @property (RF_WEAK, nonatomic) id<RFDownloadManagerDelegate> delegate;
-/// 下载队列中的任务
-@property (RF_STRONG, readonly, atomic) NSMutableArray *requrestOperations;
+/// 下载队列中的所有任务
+/// 应避免频繁调用该方法
+- (NSSet *)operations;
 
-// 未完成
+/// 正在下载中的任务
+- (NSSet *)downloadingOperations;
+
 /// 是否有下载任务进行中
 @property (readonly, nonatomic) BOOL isDownloading;
 
-// 未完成
-/// 正在下载任务的个数
-@property (readonly, nonatomic) uint runningTaskCount;
-
-// 未完成
 /// 同时允许的任务数
 @property (assign, nonatomic) uint maxRunningTaskCount;
 
