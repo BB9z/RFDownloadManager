@@ -119,9 +119,9 @@
         RFFileDownloadOperation *operation = [self.requrestOperationsQueue anyObject];
         if (!operation) break;
         
-            [self startOperation:operation];
-        }
+        [self startOperation:operation];
     }
+}
 - (void)pauseAll {
     RFFileDownloadOperation *operation;
     while ((operation = [self.requrestOperationsDownloading anyObject])) {
@@ -196,15 +196,22 @@
 }
 
 - (RFFileDownloadOperation *)findOperationWithURL:(NSURL *)url {
-    for (RFFileDownloadOperation *operation in self.requrestOperationsQueue) {
+    RFFileDownloadOperation *operation = nil;
+    
+    for (operation in self.requrestOperationsDownloading) {
         if ([operation.request.URL.path isEqualToString:url.path]) {
             return operation;
         }
-else {
-    douto(operation.request.URL)
-    douto(url)
-}
     }
+    
+    if (!operation) {
+        for (operation in self.requrestOperationsQueue) {
+            if ([operation.request.URL.path isEqualToString:url.path]) {
+                return operation;
+            }
+        }
+    }
+    
     return nil;
 }
 
