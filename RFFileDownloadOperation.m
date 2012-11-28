@@ -30,7 +30,7 @@
 @implementation RFFileDownloadOperation
 
 - (id)initWithRequest:(NSURLRequest *)urlRequest {
-    NSAssert(false, @"You can`t creat a RFFileDownloadOperation with this method.");
+    RFAssert(false, @"You can`t creat a RFFileDownloadOperation with this method.");
     return nil;
 }
 
@@ -56,7 +56,7 @@
     // if targetPath is a directory, use the file name we got from the urlRequest.
     if (isDirectory) {
         NSString *fileName = [urlRequest.URL lastPathComponent];
-        NSAssert(fileName.length > 0, @"Cannot decide file name.");
+        RFAssert(fileName.length > 0, @"Cannot decide file name.");
         destinationPath = [NSString pathWithComponents:[NSArray arrayWithObjects:targetPath, fileName, nil]];
     }
     else {
