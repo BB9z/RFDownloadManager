@@ -14,6 +14,12 @@
  
  */
 
+#ifndef _RFKit_h_
+    #error \
+    RFKit not found, \
+    To use RFDownloadManager you must add RFKit to your project first. \
+    For more infomation about RFKit, viste: https://github.com/BB9z/RFKit
+#endif
 #import "RFRuntime.h"
 #import "RFFileDownloadOperation.h"
 
