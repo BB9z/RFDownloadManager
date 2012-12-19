@@ -78,7 +78,7 @@
 - (float)transmissionSpeed;
 
 /// Indicator for the file offset on partial downloads. This is greater than zero if the file download is resumed.
-@property (assign, readonly) long long offsetContentLength;
+@property (readonly) long long offsetContentLength;
 
 @property (assign, nonatomic) NSTimeInterval stausRefreshTimeInterval;
 

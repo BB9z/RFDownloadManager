@@ -32,7 +32,7 @@
 
 #pragma mark -
 - (RFDownloadManager *)init {
-    if (self = [super init]) {
+    if ((self = [super init])) {
         _isDownloading = NO;
         _requrestURLs = [NSMutableSet set];
         _requrestOperationsQueue = [NSMutableSet set];
@@ -45,7 +45,7 @@
 }
 
 - (RFDownloadManager *)initWithDelegate:(id<RFDownloadManagerDelegate>)delegate {
-    if (self = [self init]) {
+    if ((self = [self init])) {
         self.delegate = delegate;
         return self;
     }

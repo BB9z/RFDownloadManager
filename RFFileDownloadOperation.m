@@ -9,7 +9,7 @@
 
 @interface AFURLConnectionOperation (AFInternal)
 @property (RF_STRONG, nonatomic) NSURLRequest *request;
-@property (assign, readonly, nonatomic) long long totalBytesRead;
+@property (readonly, nonatomic) long long totalBytesRead;
 
 @end
 
