@@ -241,11 +241,11 @@
         }
         
         if (self.error) {
-            dispatch_async(self.failureCallbackQueue ?: dispatch_get_main_queue(), ^{
+            dispatch_async(self.failureCallbackQueue ? self.failureCallbackQueue : dispatch_get_main_queue(), ^{
                 failure(self, self.error);
             });
         } else {
-            dispatch_async(self.successCallbackQueue ?: dispatch_get_main_queue(), ^{
+            dispatch_async(self.successCallbackQueue ? self.failureCallbackQueue : dispatch_get_main_queue(), ^{
                 success(self, _targetPath);
             });
         }
