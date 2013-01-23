@@ -94,9 +94,6 @@
     }];
     
     [operation setCompletionBlockWithSuccess:^(RFFileDownloadOperation *operation, id responseObject) {
-        if (self.delegate && [self.delegate respondsToSelector:@selector(RFDownloadManager:operationCompleted:)]) {
-            [self.delegate RFDownloadManager:self operationCompleted:operation];
-        }
         // 完成，尝试下载下一个
         [self.requrestURLs removeObject:operation.request.URL];
         [self.requrestOperationsDownloading removeObject:operation];
