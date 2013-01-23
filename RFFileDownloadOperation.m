@@ -22,12 +22,26 @@
 @property (assign) long long totalContentLength;
 @property (assign, nonatomic) long long totalBytesReadPerDownload;
 @property (assign, nonatomic) long long lastTotalBytesReadPerDownload;
-@property (assign) long long offsetContentLength;
+@property (assign) long long offsetContentLength;       // override
 @property (copy, nonatomic) void (^progressiveDownloadProgressBlock)(NSInteger bytesRead, long long totalBytesRead, long long totalBytesExpected, long long totalBytesReadForFile, long long totalBytesExpectedToReadForFile);
 @end
 
 
 @implementation RFFileDownloadOperation
+@synthesize targetPath = _targetPath;
+@synthesize shouldResume = _shouldResume;
+@synthesize stausRefreshTimer = _stausRefreshTimer;
+@synthesize transmissionSpeed = _transmissionSpeed;
+@synthesize tempPath = _tempPath;
+@synthesize totalContentLength = _totalContentLength;
+@synthesize totalBytesReadPerDownload = _totalBytesReadPerDownload;
+@synthesize lastTotalBytesReadPerDownload = _lastTotalBytesReadPerDownload;
+@synthesize progressiveDownloadProgressBlock = _progressiveDownloadProgressBlock;
+
+- (NSString *)debugDescription {
+    NSString *status = self.isFinished? @"isFinished" : (self.isPaused? @"isPaused" : (self.isExecuting? @"isExecuting" : @"Unexpected"));
+    return [NSString stringWithFormat:@"%@: status: %@, speed: %f, %lld/%lld", [self.request.URL lastPathComponent], status, self.transmissionSpeed, self.bytesDownloaded, self.bytesFileSize];
+}
 
 - (id)initWithRequest:(NSURLRequest *)urlRequest {
     RFAssert(false, @"You can`t creat a RFFileDownloadOperation with this method.");

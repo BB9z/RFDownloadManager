@@ -14,6 +14,16 @@
 @end
 
 @implementation RFDownloadManager
+@synthesize delegate = _delegate;
+@synthesize isDownloading = _isDownloading;
+@synthesize maxRunningTaskCount = _maxRunningTaskCount;
+@synthesize shouldResume = _shouldResume;
+@synthesize requrestURLs = _requrestURLs;
+@synthesize requrestOperationsDownloading = _requrestOperationsDownloading;
+@synthesize requrestOperationsQueue = _requrestOperationsQueue;
+@synthesize requrestOperationsPaused = _requrestOperationsPaused;
+@synthesize tempFileStorePath = _tempFileStorePath;
+
 - (NSString *)description {
     return [NSString stringWithFormat:@"<%@: %p, downloading:%@, queue:%@, paused:%@>", [self class], self, self.requrestOperationsDownloading, self.requrestOperationsQueue, self.requrestOperationsPaused];
 }
