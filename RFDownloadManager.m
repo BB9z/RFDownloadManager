@@ -102,15 +102,19 @@
         [self.requrestOperationsDownloading removeObject:operation];
         [self startNextQueuedOperation];
 
+        if (self.delegate && [self.delegate respondsToSelector:@selector(RFDownloadManager:operationCompleted:)]) {
+            [self.delegate RFDownloadManager:self operationCompleted:operation];
+        }
     } failure:^(RFFileDownloadOperation *operation, NSError *error) {
+        // 回退回队列
+        [self.requrestOperationsDownloading removeObject:operation];
+        [self.requrestOperationsPaused addObject:operation];
+        [self startNextQueuedOperation];
+        dout_error(@"%@", operation.error);
+        
         if (self.delegate && [self.delegate respondsToSelector:@selector(RFDownloadManager:operationFailed:)]) {
             [self.delegate RFDownloadManager:self operationFailed:operation];
         }
-        // 回退回队列
-        // TODO: 破除反复重试
-        [self.requrestOperationsDownloading removeObject:operation];
-        [self.requrestOperationsPaused addObject:operation];
-        dout_error(@"%@", operation.error);
     }];
 }
 
