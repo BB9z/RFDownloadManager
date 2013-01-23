@@ -23,6 +23,10 @@
     return [[self.requrestOperationsDownloading setByAddingObjectsFromSet:self.requrestOperationsQueue] setByAddingObjectsFromSet:self.requrestOperationsPaused];
 }
 
+- (NSUInteger)operationsCountInQueue {
+    return self.requrestOperationsDownloading.count+self.requrestOperationsQueue.count;
+}
+
 - (NSSet *)downloadingOperations {
     return [self.requrestOperationsDownloading copy];
 }
