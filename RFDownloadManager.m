@@ -19,21 +19,22 @@
 }
 
 #pragma mark - Property
+- (NSSet *)downloadingOperations {
+    return [NSSet setWithSet:self.requrestOperationsDownloading];
+}
+
+- (NSSet *)operationsInQueue {
+    return [NSSet setWithSet:self.requrestOperationsQueue];
+}
+
+- (NSSet *)pausedOperations {
+    return [NSSet setWithSet:self.requrestOperationsPaused];
+}
+
 - (NSSet *)operations {
     return [[self.requrestOperationsDownloading setByAddingObjectsFromSet:self.requrestOperationsQueue] setByAddingObjectsFromSet:self.requrestOperationsPaused];
 }
 
-- (NSUInteger)operationsCountInQueue {
-    return self.requrestOperationsDownloading.count+self.requrestOperationsQueue.count;
-}
-
-- (NSSet *)downloadingOperations {
-    return [self.requrestOperationsDownloading copy];
-}
-
-- (BOOL)isDownloading {
-    return (self.requrestOperationsDownloading.count > 0);
-}
 
 #pragma mark -
 - (RFDownloadManager *)init {

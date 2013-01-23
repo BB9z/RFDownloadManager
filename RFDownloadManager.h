@@ -35,16 +35,13 @@
 @interface RFDownloadManager : NSObject
 @property (RF_WEAK, nonatomic) id<RFDownloadManagerDelegate> delegate;
 
+- (NSSet *)downloadingOperations;
+- (NSSet *)operationsInQueue;
+- (NSSet *)pausedOperations;
+
 /// 下载队列中的所有任务
 /// 应避免频繁调用该方法
-- (NSSet *)operations;
-
-/// 正在下载和下载队列中的数目，不含暂停的任务
-- (NSUInteger)operationsCountInQueue;
-
-/// 正在下载中的任务
-- (NSSet *)downloadingOperations;
-
+- (NSSet *)operations DEPRECATED_ATTRIBUTE;
 
 /// 是否有下载任务进行中
 @property (readonly, nonatomic) BOOL isDownloading;
