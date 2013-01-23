@@ -90,9 +90,6 @@
 
 @property (assign, nonatomic) NSTimeInterval stausRefreshTimeInterval;
 
-//  其他信息
-@property (RF_STRONG, readwrite) NSDictionary *userInfo;
-
 /**
  Sets a callback to be called when an undetermined number of bytes have been downloaded from the server. This is a variant of setDownloadProgressBlock that adds support for progressive downloads and adds the
  
