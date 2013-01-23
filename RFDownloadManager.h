@@ -1,5 +1,6 @@
 /*!
     RFDownloadManager
+    ver =_=
 
     Copyright (c) 2012-2013 BB9z
     https://github.com/bb9z/RFDownloadManager
@@ -41,8 +42,7 @@
 - (NSSet *)operationsInQueue;
 - (NSSet *)pausedOperations;
 
-/// 下载队列中的所有任务
-/// 应避免频繁调用该方法
+/// All operations: downloadingOperations + operationsInQueue + pausedOperations
 - (NSSet *)operations DEPRECATED_ATTRIBUTE;
 
 /// 是否有下载任务进行中

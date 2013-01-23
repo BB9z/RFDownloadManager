@@ -121,28 +121,17 @@
 - (RFFileDownloadOperation *)findOperationWithURL:(NSURL *)url {
     RFFileDownloadOperation *operation = nil;
     
-    for (operation in self.requrestOperationsDownloading) {
-        if ([operation.request.URL.path isEqualToString:url.path]) {
-            return operation;
-        }
+#define _RFDownloadManagerFindOperationInSet(RequrestOperations)\
+    for (operation in RequrestOperations) {\
+        if ([operation.request.URL.path isEqualToString:url.path]) {\
+            return operation;\
+        }\
     }
     
-    if (!operation) {
-        for (operation in self.requrestOperationsQueue) {
-            if ([operation.request.URL.path isEqualToString:url.path]) {
-                return operation;
-            }
-        }
-    }
-    
-    if (!operation) {
-        for (operation in self.requrestOperationsPaused) {
-            if ([operation.request.URL.path isEqualToString:url.path]) {
-                return operation;
-            }
-        }
-    }
-    
+    _RFDownloadManagerFindOperationInSet(self.requrestOperationsDownloading)
+    _RFDownloadManagerFindOperationInSet(self.requrestOperationsQueue)
+    _RFDownloadManagerFindOperationInSet(self.requrestOperationsPaused)
+#undef _RFDownloadManagerFindOperationInSet
     return nil;
 }
 
@@ -152,31 +141,37 @@
     
     [operation setProgressiveDownloadProgressBlock:^(NSInteger bytesRead, long long totalBytesRead, long long totalBytesExpected, long long totalBytesReadForFile, long long totalBytesExpectedToReadForFile) {
         
-        if (self.delegate && [self.delegate respondsToSelector:@selector(RFDownloadManager:operationStateUpdate:)]) {
+        if ([self.delegate respondsToSelector:@selector(RFDownloadManager:operationStateUpdate:)]) {
             [self.delegate RFDownloadManager:self operationStateUpdate:operation];
         }
     }];
     
     [operation setCompletionBlockWithSuccess:^(RFFileDownloadOperation *operation, id responseObject) {
-        // 完成，尝试下载下一个
-        [self.requrestURLs removeObject:operation.request.URL];
-        [self.requrestOperationsDownloading removeObject:operation];
-        [self startNextQueuedOperation];
+        [self onFileDownloadOperationComplete:operation success:YES];
+    } failure:^(RFFileDownloadOperation *operation, NSError *error) {
+        [self onFileDownloadOperationComplete:operation success:NO];
+    }];
+}
 
-        if (self.delegate && [self.delegate respondsToSelector:@selector(RFDownloadManager:operationCompleted:)]) {
+- (void)onFileDownloadOperationComplete:(RFFileDownloadOperation *)operation success:(BOOL)success {
+    [self.requrestOperationsDownloading removeObject:operation];
+    [self startNextQueuedOperation];
+
+    if (success) {
+        [self.requrestURLs removeObject:operation.request.URL];
+        
+        if ([self.delegate respondsToSelector:@selector(RFDownloadManager:operationCompleted:)]) {
             [self.delegate RFDownloadManager:self operationCompleted:operation];
         }
-    } failure:^(RFFileDownloadOperation *operation, NSError *error) {
-        // 回退回队列
-        [self.requrestOperationsDownloading removeObject:operation];
+    }
+    else {
         [self.requrestOperationsPaused addObject:operation];
-        [self startNextQueuedOperation];
         dout_error(@"%@", operation.error);
         
-        if (self.delegate && [self.delegate respondsToSelector:@selector(RFDownloadManager:operationFailed:)]) {
+        if ([self.delegate respondsToSelector:@selector(RFDownloadManager:operationFailed:)]) {
             [self.delegate RFDownloadManager:self operationFailed:operation];
         }
-    }];
+    }
 }
 
 #pragma mark - Queue Manage
