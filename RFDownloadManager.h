@@ -61,6 +61,9 @@
 - (RFFileDownloadOperation *)addURL:(NSURL *)url fileStorePath:(NSString *)destinationFilePath;
 - (RFFileDownloadOperation *)findOperationWithURL:(NSURL *)url;
 
+/// Subclass can override this method to change operation option.
+- (void)setupDownloadOperation:(RFFileDownloadOperation *)downloadOperation;
+
 - (void)startAll;
 - (void)pauseAll;
 - (void)cancelAll;

@@ -10,7 +10,6 @@
 @property (RF_STRONG, atomic) NSMutableSet *requrestOperationsPaused;
 
 @property (assign, readwrite, nonatomic) BOOL isDownloading;
-@property (copy, nonatomic) NSString *tempFileStorePath;
 @end
 
 @implementation RFDownloadManager
@@ -22,7 +21,6 @@
 @synthesize requrestOperationsDownloading = _requrestOperationsDownloading;
 @synthesize requrestOperationsQueue = _requrestOperationsQueue;
 @synthesize requrestOperationsPaused = _requrestOperationsPaused;
-@synthesize tempFileStorePath = _tempFileStorePath;
 
 - (NSString *)description {
     return [NSString stringWithFormat:@"<%@: %p, downloading:%@, queue:%@, paused:%@>", [self class], self, self.requrestOperationsDownloading, self.requrestOperationsQueue, self.requrestOperationsPaused];
@@ -201,13 +199,13 @@
 }
 - (void)cancelAll {
     RFFileDownloadOperation *operation;
-    while ((operation = [self.requrestOperationsDownloading anyObject])) {
+    while ((operation = [self.requrestOperationsPaused anyObject])) {
         [self cancelOperation:operation];
     }
     while ((operation = [self.requrestOperationsQueue anyObject])) {
         [self cancelOperation:operation];
     }
-    while ((operation = [self.requrestOperationsPaused anyObject])) {
+    while ((operation = [self.requrestOperationsDownloading anyObject])) {
         [self cancelOperation:operation];
     }
 }
@@ -226,6 +224,7 @@
         return;
     }
     
+    [self.requrestOperationsPaused removeObject:operation];
     if (self.requrestOperationsDownloading.count < self.maxRunningTaskCount) {
         // 开始下载
         if ([operation isPaused]) {
@@ -242,8 +241,6 @@
         // 加入到队列
         [self.requrestOperationsQueue addObject:operation];
     }
-    
-    [self.requrestOperationsPaused removeObject:operation];
 }
 - (void)pauseOperation:(RFFileDownloadOperation *)operation {
     if (!operation) {
