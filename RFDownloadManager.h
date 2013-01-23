@@ -1,25 +1,19 @@
 /*!
     RFDownloadManager
 
-    Copyright (c) 2012 BB9z
-    http://github.com/bb9z/RFKit
+    Copyright (c) 2012-2013 BB9z
+    https://github.com/bb9z/RFDownloadManager
 
     The MIT License (MIT)
     http://www.opensource.org/licenses/mit-license.php
 */
 
-/** Example
-    
- 
- 
+/**
+    RFDownloadManager needs:
+    - RFKit <https://github.com/BB9z/RFKit>
+    - AFNetworking <https://github.com/AFNetworking/AFNetworking>
  */
 
-#ifndef _RFKit_h_
-    #error \
-    RFKit not found, \
-    To use RFDownloadManager you must add RFKit to your project first. \
-    For more infomation about RFKit, viste: https://github.com/BB9z/RFKit
-#endif
 #import "RFRuntime.h"
 #import "RFFileDownloadOperation.h"
 
