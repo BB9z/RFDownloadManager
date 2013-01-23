@@ -5,8 +5,8 @@
 
 @interface RFDownloadManager ()
 @property (RF_STRONG, atomic) NSMutableSet *requrestURLs;
-@property (RF_STRONG, atomic) NSMutableSet *requrestOperationsQueue;
 @property (RF_STRONG, atomic) NSMutableSet *requrestOperationsDownloading;
+@property (RF_STRONG, atomic) NSMutableSet *requrestOperationsQueue;
 @property (RF_STRONG, atomic) NSMutableSet *requrestOperationsPaused;
 
 @property (assign, readwrite, nonatomic) BOOL isDownloading;
@@ -38,7 +38,8 @@
 
 #pragma mark -
 - (RFDownloadManager *)init {
-    if ((self = [super init])) {
+    self = [super init];
+    if (self) {
         _isDownloading = NO;
         _requrestURLs = [NSMutableSet set];
         _requrestOperationsQueue = [NSMutableSet set];
@@ -46,17 +47,16 @@
         _requrestOperationsPaused = [NSMutableSet set];
         _maxRunningTaskCount = 3;
         _shouldResume = YES;
-        return self;
     }
-    return nil;
+    return self;
 }
 
 - (RFDownloadManager *)initWithDelegate:(id<RFDownloadManagerDelegate>)delegate {
-    if ((self = [self init])) {
+    self = [self init];
+    if (self) {
         self.delegate = delegate;
-        return self;
     }
-    return nil;
+    return self;
 }
 
 + (instancetype)sharedInstance {
@@ -85,6 +85,34 @@
     [self.requrestURLs addObject:url];
     
     return downloadOperation;
+}
+
+- (RFFileDownloadOperation *)findOperationWithURL:(NSURL *)url {
+    RFFileDownloadOperation *operation = nil;
+    
+    for (operation in self.requrestOperationsDownloading) {
+        if ([operation.request.URL.path isEqualToString:url.path]) {
+            return operation;
+        }
+    }
+    
+    if (!operation) {
+        for (operation in self.requrestOperationsQueue) {
+            if ([operation.request.URL.path isEqualToString:url.path]) {
+                return operation;
+            }
+        }
+    }
+    
+    if (!operation) {
+        for (operation in self.requrestOperationsPaused) {
+            if ([operation.request.URL.path isEqualToString:url.path]) {
+                return operation;
+            }
+        }
+    }
+    
+    return nil;
 }
 
 - (void)setupDownloadOperation:(RFFileDownloadOperation *)downloadOperation {
@@ -120,6 +148,7 @@
     }];
 }
 
+#pragma mark - Queue Manage
 - (void)startAll {
     // Paused => Queue
     [self.requrestOperationsQueue unionSet:self.requrestOperationsPaused];
@@ -154,6 +183,13 @@
     }
     while ((operation = [self.requrestOperationsPaused anyObject])) {
         [self cancelOperation:operation];
+    }
+}
+
+- (void)startNextQueuedOperation {
+    if (self.requrestOperationsQueue.count > 0 && self.requrestOperationsDownloading.count < self.maxRunningTaskCount) {
+        RFFileDownloadOperation *operationNext = [self.requrestOperationsQueue anyObject];
+        [self startOperation:operationNext];
     }
 }
 
@@ -208,12 +244,7 @@
     [self.requrestOperationsDownloading removeObject:operation];
     [self.requrestOperationsQueue removeObject:operation];
     [self.requrestOperationsPaused removeObject:operation];
-}
-- (void)startNextQueuedOperation {
-    if (self.requrestOperationsQueue.count > 0) {
-        RFFileDownloadOperation *operationNext = [self.requrestOperationsQueue anyObject];
-        [self startOperation:operationNext];
-    }
+    [self startNextQueuedOperation];
 }
 
 - (void)startOperationWithURL:(NSURL *)url {
@@ -224,34 +255,6 @@
 }
 - (void)cancelOperationWithURL:(NSURL *)url {
     [self cancelOperation:[self findOperationWithURL:url]];
-}
-
-- (RFFileDownloadOperation *)findOperationWithURL:(NSURL *)url {
-    RFFileDownloadOperation *operation = nil;
-    
-    for (operation in self.requrestOperationsDownloading) {
-        if ([operation.request.URL.path isEqualToString:url.path]) {
-            return operation;
-        }
-    }
-    
-    if (!operation) {
-        for (operation in self.requrestOperationsQueue) {
-            if ([operation.request.URL.path isEqualToString:url.path]) {
-                return operation;
-            }
-        }
-    }
-    
-    if (!operation) {
-        for (operation in self.requrestOperationsPaused) {
-            if ([operation.request.URL.path isEqualToString:url.path]) {
-                return operation;
-            }
-        }
-    }
-    
-    return nil;
 }
 
 

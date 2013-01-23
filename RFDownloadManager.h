@@ -33,6 +33,8 @@
 @end
 
 @interface RFDownloadManager : NSObject
++ (RFDownloadManager *)sharedInstance;
+- (RFDownloadManager *)initWithDelegate:(id<RFDownloadManagerDelegate>)delegate;
 @property (RF_WEAK, nonatomic) id<RFDownloadManagerDelegate> delegate;
 
 - (NSSet *)downloadingOperations;
@@ -55,14 +57,9 @@
 /// Default YES.
 @property (assign, nonatomic) BOOL shouldResume;
 
-- (RFDownloadManager *)initWithDelegate:(id<RFDownloadManagerDelegate>)delegate;
-+ (RFDownloadManager *)sharedInstance;
-
-/**
-    
-    返回nil，如果已经包含该url或者创建新对象失败
- */
+/// Return nil, if has the url or operation creat failure.
 - (RFFileDownloadOperation *)addURL:(NSURL *)url fileStorePath:(NSString *)destinationFilePath;
+- (RFFileDownloadOperation *)findOperationWithURL:(NSURL *)url;
 
 - (void)startAll;
 - (void)pauseAll;
@@ -74,7 +71,6 @@
 - (void)pauseOperationWithURL:(NSURL *)url;
 - (void)cancelOperationWithURL:(NSURL *)url;
 
-- (RFFileDownloadOperation *)findOperationWithURL:(NSURL *)url;
 @end
 
 
