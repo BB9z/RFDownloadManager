@@ -43,20 +43,20 @@
     if (!(self = [super initWithRequest:urlRequest])) {
         return nil;
     }
-    
+        
     // Check target path
     NSString *destinationPath = nil;
     
-    // we assume that at least the directory has to exist on the targetPath
+    // We assume that at least the directory has to exist on the targetPath
     BOOL isDirectory;
     if(![[NSFileManager defaultManager] fileExistsAtPath:targetPath isDirectory:&isDirectory]) {
         isDirectory = NO;
     }
-    // if targetPath is a directory, use the file name we got from the urlRequest.
+    // If targetPath is a directory, use the file name we got from the urlRequest.
     if (isDirectory) {
         NSString *fileName = [urlRequest.URL lastPathComponent];
         RFAssert(fileName.length > 0, @"Cannot decide file name.");
-        destinationPath = [NSString pathWithComponents:[NSArray arrayWithObjects:targetPath, fileName, nil]];
+        destinationPath = [NSString pathWithComponents:@[targetPath, fileName]];
     }
     else {
         destinationPath = targetPath;
@@ -64,25 +64,23 @@
     
     self.shouldCoverOldFile = shouldCoverOldFile;
     if (!shouldCoverOldFile && [[NSFileManager defaultManager] fileExistsAtPath:destinationPath]) {
-        dout_warning(@"RFFileDownloadOperation: File already exist.");
+        dout_warning(@"RFFileDownloadOperation: File already exist, and cover option was off.");
         return nil;
     }
     
     _targetPath = destinationPath;
     
-    // download is saved into a temporal file and remaned upon completion
+    // Download is saved into a temporal file and remaned upon completion
     NSString *tempPath = [self tempPath];
     
     // Do we need to resume the file?
     _shouldResume = shouldResume;
     BOOL isResuming = [self updateByteStartRangeForRequest];
     
-    // try to create/open a file at the target location
+    // Try to create/open a file at the target location
     if (!isResuming) {
         int fileDescriptor = open([tempPath UTF8String], O_CREAT | O_EXCL | O_RDWR, 0666);
-        if (fileDescriptor > 0) {
-            close(fileDescriptor);
-        }
+        if (fileDescriptor > 0) close(fileDescriptor);
     }
     
     self.outputStream = [NSOutputStream outputStreamToFileAtPath:tempPath append:isResuming];
@@ -90,9 +88,9 @@
         dout_error(@"Output stream can't be created");
         return nil;
     }
-
-    // defalut
-    self.stausRefreshTimeInterval = 1;
+    
+    // Set defalut value
+    _stausRefreshTimeInterval = 1;
     
     return self;
 }
@@ -132,6 +130,7 @@
 - (void)pause {
     [super pause];
     [self deactiveStausRefreshTimer];
+    [self updateByteStartRangeForRequest];
 }
 
 - (void)cancel {
@@ -176,7 +175,7 @@
         NSString *cacheDir = NSTemporaryDirectory();
         cacheFolder = [cacheDir stringByAppendingPathComponent:kAFNetworkingIncompleteDownloadFolderName];
         
-        // ensure all cache directories are there (needed only once)
+        // Ensure all cache directories are there (needed only once)
         NSError *error = nil;
         if(![[NSFileManager new] createDirectoryAtPath:cacheFolder withIntermediateDirectories:YES attributes:nil error:&error]) {
             dout_error(@"Failed to create cache directory at %@", cacheFolder);
@@ -215,8 +214,7 @@
 #pragma clang diagnostic ignored "-Warc-retain-cycles"
     self.completionBlock = ^ {
         NSError *localError = nil;
-        if([self isCancelled]) {
-            // should we clean up? most likely we don't.
+        if(self.isCancelled) {
             if (self.isDeletingTempFileOnCancel) {
                 [self deleteTempFileWithError:&localError];
                 if (localError) {
@@ -225,9 +223,9 @@
             }
             return;
         }
-        // loss of network connections = error set, but not cancel
+        // Loss of network connections = error set, but not cancel
         else if (!self.error) {
-            // move file to final position and capture error
+            // Move file to final position and capture error
             @synchronized(self) {
                 NSFileManager *fm = [NSFileManager new];
                 if (self.shouldCoverOldFile && [fm fileExistsAtPath:_targetPath]) {
@@ -264,11 +262,7 @@
 }
 
 - (NSError *)error {
-    if (_fileError) {
-        return _fileError;
-    } else {
-        return [super error];
-    }
+    return _fileError ? _fileError : [super error];
 }
 
 #pragma mark - NSURLConnectionDelegate
@@ -276,13 +270,13 @@
 - (void)connection:(NSURLConnection *)connection didReceiveResponse:(NSURLResponse *)response {
     [super connection:connection didReceiveResponse:response];
     
-    // check if we have the correct response
+    // Check if we have the correct response
     NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
     if (![httpResponse isKindOfClass:[NSHTTPURLResponse class]]) {
         return;
     }
     
-    // check for valid response to resume the download if possible
+    // Check for valid response to resume the download if possible
     long long totalContentLength = self.response.expectedContentLength;
     long long fileOffset = 0;
     if(httpResponse.statusCode == 206) {
@@ -290,17 +284,17 @@
         if ([contentRange hasPrefix:@"bytes"]) {
             NSArray *bytes = [contentRange componentsSeparatedByCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@" -/"]];
             if ([bytes count] == 4) {
-                fileOffset = [[bytes objectAtIndex:1] longLongValue];
-                totalContentLength = [[bytes objectAtIndex:2] longLongValue]; // if this is *, it's converted to 0
+                fileOffset = [bytes[1] longLongValue];
+                totalContentLength = [bytes[2] longLongValue]; // If this is *, it's converted to 0
             }
         }
     }
     
     self.totalBytesReadPerDownload = 0;
     self.lastTotalBytesReadPerDownload = 0;
-    self.offsetContentLength = MAX(fileOffset, 0);
+    self.offsetContentLength = fmaxl(fileOffset, 0);
     self.totalContentLength = totalContentLength;
-    [self.outputStream setProperty:[NSNumber numberWithLongLong:_offsetContentLength] forKey:NSStreamFileCurrentOffsetKey];
+    [self.outputStream setProperty:@(_offsetContentLength) forKey:NSStreamFileCurrentOffsetKey];
 }
 
 - (long long)bytesDownloaded {
@@ -314,7 +308,7 @@
 - (void)connection:(NSURLConnection *)connection didReceiveData:(NSData *)data  {
     [super connection:connection didReceiveData:data];
     
-    // track custom bytes read because totalBytesRead persists between pause/resume.
+    // Track custom bytes read because totalBytesRead persists between pause/resume.
     self.totalBytesReadPerDownload += [data length];
 
     if (self.progressiveDownloadProgressBlock) {

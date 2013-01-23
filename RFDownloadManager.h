@@ -50,7 +50,8 @@
 /// 是否有下载任务进行中
 @property (readonly, nonatomic) BOOL isDownloading;
 
-/// 同时允许的任务数
+/// How many file can download at the same time.
+/// Default 3.
 @property (assign, nonatomic) uint maxRunningTaskCount;
 
 /// Should try to resume download proccess if there are download temp file exsist.

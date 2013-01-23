@@ -1,5 +1,6 @@
 
 #import "RFDownloadManager.h"
+#import "AFNetworking.h"
 #import "dout.h"
 
 @interface RFDownloadManager ()
@@ -53,7 +54,7 @@
     return nil;
 }
 
-+ (RFDownloadManager *)sharedInstance {
++ (instancetype)sharedInstance {
 	static RFDownloadManager *sharedInstance = nil;
     static dispatch_once_t oncePredicate;
     dispatch_once(&oncePredicate, ^{
@@ -65,7 +66,7 @@
 #pragma mark -
 - (RFFileDownloadOperation *)addURL:(NSURL *)url fileStorePath:(NSString *)destinationFilePath {
     if ([self.requrestURLs containsObject:url]) {
-        dout_warning(@"RFDownloadManager: the url already existed. %@", url)
+        dout_warning(@"RFDownloadManager: the url already existed. %@", url);
         return nil;
     }
 
@@ -81,7 +82,6 @@
     return downloadOperation;
 }
 
-// TODO: 破除反复重试
 - (void)setupDownloadOperation:(RFFileDownloadOperation *)downloadOperation {
     __weak RFFileDownloadOperation *operation = downloadOperation;
     operation.deleteTempFileOnCancel = YES;
