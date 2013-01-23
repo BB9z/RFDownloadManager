@@ -35,6 +35,27 @@
     return [[self.requrestOperationsDownloading setByAddingObjectsFromSet:self.requrestOperationsQueue] setByAddingObjectsFromSet:self.requrestOperationsPaused];
 }
 
+- (void)setMaxRunningTaskCount:(uint)maxRunningTaskCount {
+    if (_maxRunningTaskCount != maxRunningTaskCount) {
+        [self willChangeValueForKey:@keypath(self, maxRunningTaskCount)];
+        int diffCount = self.downloadingOperations.count - maxRunningTaskCount;
+        if (diffCount > 0) {
+            for (int i = diffCount; i > 0; i--) {
+                RFFileDownloadOperation *operation = [self.downloadingOperations anyObject];
+                [operation pause];
+                [self.requrestOperationsPaused addObject:operation];
+                [self.requrestOperationsDownloading removeObject:operation];
+            }
+        }
+        else {
+            for (int i = diffCount; i > 0; i--) {
+                [self startNextQueuedOperation];
+            }
+        }
+        _maxRunningTaskCount = maxRunningTaskCount;
+        [self didChangeValueForKey:@keypath(self, maxRunningTaskCount)];
+    }
+}
 
 #pragma mark -
 - (RFDownloadManager *)init {
