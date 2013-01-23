@@ -53,6 +53,11 @@
 /// 同时允许的任务数
 @property (assign, nonatomic) uint maxRunningTaskCount;
 
+/// Should try to resume download proccess if there are download temp file exsist.
+/// Only affect operations which created after this property set.
+/// Default YES.
+@property (assign, nonatomic) BOOL shouldResume;
+
 - (RFDownloadManager *)initWithDelegate:(id<RFDownloadManagerDelegate>)delegate;
 + (RFDownloadManager *)sharedInstance;
 

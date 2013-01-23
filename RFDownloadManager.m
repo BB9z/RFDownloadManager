@@ -39,6 +39,7 @@
         _requrestOperationsDownloading = [NSMutableSet setWithCapacity:5];
         _requrestOperationsPaused = [NSMutableSet set];
         _maxRunningTaskCount = 3;
+        _shouldResume = YES;
         return self;
     }
     return nil;
@@ -68,7 +69,7 @@
         return nil;
     }
 
-    RFFileDownloadOperation *downloadOperation = [[RFFileDownloadOperation alloc] initWithRequest:[NSURLRequest requestWithURL:url] targetPath:destinationFilePath shouldCoverOldFile:YES];
+    RFFileDownloadOperation *downloadOperation = [[RFFileDownloadOperation alloc] initWithRequest:[NSURLRequest requestWithURL:url] targetPath:destinationFilePath shouldResume:self.shouldResume shouldCoverOldFile:YES];
     if (downloadOperation == nil) {
         return nil;
     }

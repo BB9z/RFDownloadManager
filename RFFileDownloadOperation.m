@@ -35,12 +35,11 @@
 }
 
 - (id)initWithRequest:(NSURLRequest *)urlRequest targetPath:(NSString *)targetPath {
-    return [self initWithRequest:urlRequest targetPath:targetPath shouldCoverOldFile:YES];
+    return [self initWithRequest:urlRequest targetPath:targetPath shouldResume:YES shouldCoverOldFile:YES];
 }
 
-- (id)initWithRequest:(NSURLRequest *)urlRequest targetPath:(NSString *)targetPath  shouldCoverOldFile:(BOOL)shouldCoverOldFile {
+- (id)initWithRequest:(NSURLRequest *)urlRequest targetPath:(NSString *)targetPath shouldResume:(BOOL)shouldResume shouldCoverOldFile:(BOOL)shouldCoverOldFile {
     NSParameterAssert(urlRequest != nil && targetPath.length > 0);
-    
     if (!(self = [super initWithRequest:urlRequest])) {
         return nil;
     }
@@ -74,17 +73,9 @@
     // download is saved into a temporal file and remaned upon completion
     NSString *tempPath = [self tempPath];
     
-    // do we need to resume the file?
-    BOOL isResuming = NO;
-    
-    unsigned long long downloadedBytes = [[NSFileManager defaultManager] fileSizeForPath:tempPath];
-    if (downloadedBytes > 0) {
-        NSMutableURLRequest *mutableURLRequest = [urlRequest mutableCopy];
-        NSString *requestRange = [NSString stringWithFormat:@"bytes=%llu-", downloadedBytes];
-        [mutableURLRequest setValue:requestRange forHTTPHeaderField:@"Range"];
-        self.request = mutableURLRequest;
-        isResuming = YES;
-    }
+    // Do we need to resume the file?
+    _shouldResume = shouldResume;
+    BOOL isResuming = [self updateByteStartRangeForRequest];
     
     // try to create/open a file at the target location
     if (!isResuming) {
@@ -105,6 +96,23 @@
     
     return self;
 }
+
+// Updates the current request to set the correct start-byte-range.
+- (BOOL)updateByteStartRangeForRequest {
+    BOOL isResuming = NO;
+    if (self.shouldResume) {
+        unsigned long long downloadedBytes = [[NSFileManager defaultManager] fileSizeForPath:self.tempPath];
+        if (downloadedBytes > 0) {
+            NSMutableURLRequest *mutableURLRequest = [self.request mutableCopy];
+            NSString *requestRange = [NSString stringWithFormat:@"bytes=%llu-", downloadedBytes];
+            [mutableURLRequest setValue:requestRange forHTTPHeaderField:@"Range"];
+            self.request = mutableURLRequest;
+            isResuming = YES;
+        }
+    }
+    return isResuming;
+}
+
 
 - (void)dealloc {
     dout(@"dealloc: %@", self);
