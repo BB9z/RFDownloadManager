@@ -103,6 +103,9 @@
         return nil;
     }
     
+    // Give the object its default completionBlock.
+    [self setCompletionBlockWithSuccess:nil failure:nil];
+    
     // Set defalut value
     _stausRefreshTimeInterval = 1;
     
@@ -235,7 +238,6 @@
                     _fileError = localError;
                 }
             }
-            return;
         }
         // Loss of network connections = error set, but not cancel
         else if (!self.error) {
@@ -261,13 +263,17 @@
         }
         
         if (self.error) {
-            dispatch_async(self.failureCallbackQueue ? self.failureCallbackQueue : dispatch_get_main_queue(), ^{
-                failure(self, self.error);
-            });
+            if (failure) {
+                dispatch_async(self.failureCallbackQueue ? self.failureCallbackQueue : dispatch_get_main_queue(), ^{
+                    failure(self, self.error);
+                });
+            }
         } else {
-            dispatch_async(self.successCallbackQueue ? self.failureCallbackQueue : dispatch_get_main_queue(), ^{
-                success(self, _targetPath);
-            });
+            if (success) {
+                dispatch_async(self.successCallbackQueue ? self.failureCallbackQueue : dispatch_get_main_queue(), ^{
+                    success(self, _targetPath);
+                });
+            }
         }
         
         [self deactiveStausRefreshTimer];
@@ -326,13 +332,15 @@
     self.totalBytesReadPerDownload += [data length];
 
     if (self.progressiveDownloadProgressBlock) {
-        self.progressiveDownloadProgressBlock(
-            (long long)[data length],
-            self.totalBytesRead,
-            self.response.expectedContentLength,
-            self.totalBytesReadPerDownload + self.offsetContentLength,
-            self.totalContentLength
-        );
+        dispatch_async(dispatch_get_main_queue(), ^{
+            self.progressiveDownloadProgressBlock(
+                (long long)[data length],
+                self.totalBytesRead,
+                self.response.expectedContentLength,
+                self.totalBytesReadPerDownload + self.offsetContentLength,
+                self.totalContentLength
+            );
+        });
     }
 }
 
