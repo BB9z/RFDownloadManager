@@ -30,6 +30,7 @@
 @implementation RFFileDownloadOperation
 @synthesize targetPath = _targetPath;
 @synthesize shouldResume = _shouldResume;
+@synthesize shouldOverwriteOldFile = _shouldOverwriteOldFile;
 @synthesize stausRefreshTimer = _stausRefreshTimer;
 @synthesize transmissionSpeed = _transmissionSpeed;
 @synthesize tempPath = _tempPath;
@@ -52,7 +53,7 @@
     return [self initWithRequest:urlRequest targetPath:targetPath shouldResume:YES shouldCoverOldFile:YES];
 }
 
-- (id)initWithRequest:(NSURLRequest *)urlRequest targetPath:(NSString *)targetPath shouldResume:(BOOL)shouldResume shouldCoverOldFile:(BOOL)shouldCoverOldFile {
+- (id)initWithRequest:(NSURLRequest *)urlRequest targetPath:(NSString *)targetPath shouldResume:(BOOL)shouldResume shouldCoverOldFile:(BOOL)shouldOverwriteOldFile {
     NSParameterAssert(urlRequest != nil && targetPath.length > 0);
     if (!(self = [super initWithRequest:urlRequest])) {
         return nil;
@@ -76,8 +77,8 @@
         destinationPath = targetPath;
     }
     
-    self.shouldCoverOldFile = shouldCoverOldFile;
-    if (!shouldCoverOldFile && [[NSFileManager defaultManager] fileExistsAtPath:destinationPath]) {
+    self.shouldOverwriteOldFile = shouldOverwriteOldFile;
+    if (!shouldOverwriteOldFile && [[NSFileManager defaultManager] fileExistsAtPath:destinationPath]) {
         dout_warning(@"RFFileDownloadOperation: File already exist, and cover option was off.");
         return nil;
     }
@@ -244,7 +245,7 @@
             // Move file to final position and capture error
             @synchronized(self) {
                 NSFileManager *fm = [NSFileManager new];
-                if (self.shouldCoverOldFile && [fm fileExistsAtPath:_targetPath]) {
+                if (self.shouldOverwriteOldFile && [fm fileExistsAtPath:_targetPath]) {
                     [fm removeItemAtPath:_targetPath error:&localError];
                     if (localError) {
                         dout_error(@"Can`t remove exist file.");

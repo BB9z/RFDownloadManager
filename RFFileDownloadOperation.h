@@ -46,10 +46,10 @@
  @param urlRequest The request object to be loaded asynchronously during execution of the operation
  @param targetPath The target path (with or without file name)
  @param shouldResume If YES, tries to resume a partial download if found.
- @param shouldCoverOldFile If YES, will cover file ex.
+ @param shouldOverwriteOldFile If YES, will overwrite exist file.
  @return A new download request operation
  */
-- (id)initWithRequest:(NSURLRequest *)urlRequest targetPath:(NSString *)targetPath shouldResume:(BOOL)shouldResume shouldCoverOldFile:(BOOL)shouldCoverOldFile;
+- (id)initWithRequest:(NSURLRequest *)urlRequest targetPath:(NSString *)targetPath shouldResume:(BOOL)shouldResume shouldCoverOldFile:(BOOL)shouldOverwriteOldFile;
 - (id)initWithRequest:(NSURLRequest *)urlRequest targetPath:(NSString *)targetPath;
 
 /**
@@ -69,8 +69,11 @@
  */
 @property (readonly) BOOL shouldResume;
 
-/// Default YES
-@property (assign, nonatomic) BOOL shouldCoverOldFile;
+/**
+ A Boolean value that indicates if we should allow a downloaded file to overwrite
+ a previously downloaded file of the same name. Default is `YES`.
+ */
+@property (assign, nonatomic) BOOL shouldOverwriteOldFile;
 
 #pragma mark - Status
 
