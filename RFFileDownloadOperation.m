@@ -13,9 +13,8 @@
 
 @end
 
-@interface RFFileDownloadOperation() {
-    NSError *_fileError;
-}
+@interface RFFileDownloadOperation()
+@property (RF_STRONG, nonatomic) NSError *fileError;
 @property (RF_STRONG, nonatomic) NSTimer *stausRefreshTimer;
 @property (assign, readwrite) float transmissionSpeed;
 @property (RF_STRONG, nonatomic) NSString *tempPath;
@@ -31,6 +30,7 @@
 @synthesize targetPath = _targetPath;
 @synthesize shouldResume = _shouldResume;
 @synthesize shouldOverwriteOldFile = _shouldOverwriteOldFile;
+@synthesize fileError = _fileError;
 @synthesize stausRefreshTimer = _stausRefreshTimer;
 @synthesize transmissionSpeed = _transmissionSpeed;
 @synthesize tempPath = _tempPath;
@@ -236,7 +236,7 @@
             if (self.isDeletingTempFileOnCancel) {
                 [self deleteTempFileWithError:&localError];
                 if (localError) {
-                    _fileError = localError;
+                    self.fileError = localError;
                 }
             }
         }
@@ -245,19 +245,19 @@
             // Move file to final position and capture error
             @synchronized(self) {
                 NSFileManager *fm = [NSFileManager new];
-                if (self.shouldOverwriteOldFile && [fm fileExistsAtPath:_targetPath]) {
-                    [fm removeItemAtPath:_targetPath error:&localError];
+                if (self.shouldOverwriteOldFile && [fm fileExistsAtPath:self.targetPath]) {
+                    [fm removeItemAtPath:self.targetPath error:&localError];
                     if (localError) {
                         dout_error(@"Can`t remove exist file.");
                     }
                 }
                 if (localError) {
-                    _fileError = localError;
+                    self.fileError = localError;
                 }
                 else {
-                    [fm moveItemAtPath:[self tempPath] toPath:_targetPath error:&localError];
+                    [fm moveItemAtPath:[self tempPath] toPath:self.targetPath error:&localError];
                     if (localError) {
-                        _fileError = localError;
+                        self.fileError = localError;
                     }
                 }
             }
@@ -272,7 +272,7 @@
         } else {
             if (success) {
                 dispatch_async(self.successCallbackQueue ? self.failureCallbackQueue : dispatch_get_main_queue(), ^{
-                    success(self, _targetPath);
+                    success(self, self.targetPath);
                 });
             }
         }
@@ -283,7 +283,7 @@
 }
 
 - (NSError *)error {
-    return _fileError ? _fileError : [super error];
+    return self.fileError ? self.fileError : [super error];
 }
 
 #pragma mark - NSURLConnectionDelegate
@@ -315,7 +315,7 @@
     self.lastTotalBytesReadPerDownload = 0;
     self.offsetContentLength = fmaxl(fileOffset, 0);
     self.totalContentLength = totalContentLength;
-    [self.outputStream setProperty:@(_offsetContentLength) forKey:NSStreamFileCurrentOffsetKey];
+    [self.outputStream setProperty:@(self.offsetContentLength) forKey:NSStreamFileCurrentOffsetKey];
 }
 
 - (long long)bytesDownloaded {
