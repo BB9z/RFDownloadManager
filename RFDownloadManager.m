@@ -134,17 +134,16 @@
 }
 
 - (void)setupDownloadOperation:(RFFileDownloadOperation *)downloadOperation {
-    __weak RFFileDownloadOperation *operation = downloadOperation;
-    operation.deleteTempFileOnCancel = YES;
+    __weak RFFileDownloadOperation *aOperation = downloadOperation;
+    aOperation.deleteTempFileOnCancel = YES;
     
-    [operation setProgressiveDownloadProgressBlock:^(NSInteger bytesRead, long long totalBytesRead, long long totalBytesExpected, long long totalBytesReadForFile, long long totalBytesExpectedToReadForFile) {
-        
+    [aOperation setProgressiveDownloadProgressBlock:^(RFFileDownloadOperation *operation) {
         if ([self.delegate respondsToSelector:@selector(RFDownloadManager:operationStateUpdate:)]) {
             [self.delegate RFDownloadManager:self operationStateUpdate:operation];
         }
     }];
     
-    [operation setCompletionBlockWithSuccess:^(RFFileDownloadOperation *operation, id responseObject) {
+    [aOperation setCompletionBlockWithSuccess:^(RFFileDownloadOperation *operation, id responseObject) {
         [self onFileDownloadOperationComplete:operation success:YES];
     } failure:^(RFFileDownloadOperation *operation, NSError *error) {
         [self onFileDownloadOperationComplete:operation success:NO];

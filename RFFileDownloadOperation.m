@@ -22,7 +22,7 @@
 @property (assign, nonatomic) long long totalBytesReadPerDownload;
 @property (assign, nonatomic) long long lastTotalBytesReadPerDownload;
 @property (assign) long long offsetContentLength;       // override
-@property (copy, nonatomic) void (^progressiveDownloadProgressBlock)(NSInteger bytesRead, long long totalBytesRead, long long totalBytesExpected, long long totalBytesReadForFile, long long totalBytesExpectedToReadForFile);
+@property (copy, nonatomic) void (^progressiveDownloadProgressBlock)(RFFileDownloadOperation *operation);
 @end
 
 
@@ -334,13 +334,7 @@
 
     if (self.progressiveDownloadProgressBlock) {
         dispatch_async(dispatch_get_main_queue(), ^{
-            self.progressiveDownloadProgressBlock(
-                (long long)[data length],
-                self.totalBytesRead,
-                self.response.expectedContentLength,
-                self.totalBytesReadPerDownload + self.offsetContentLength,
-                self.totalContentLength
-            );
+            self.progressiveDownloadProgressBlock(self);
         });
     }
 }

@@ -83,9 +83,11 @@
 - (long long)bytesFileSize;
 
 /// 已下载大小
+/// 
 - (long long)bytesDownloaded;
 
 /// 下载速度/每秒
+/// Download speed, refresh every `stausRefreshTimeInterval`
 - (float)transmissionSpeed;
 
 /// Indicator for the file offset on partial downloads. This is greater than zero if the file download is resumed.
@@ -93,21 +95,15 @@
 
 @property (assign, nonatomic) NSTimeInterval stausRefreshTimeInterval;
 
-/**
- Sets a callback to be called when an undetermined number of bytes have been downloaded from the server. This is a variant of setDownloadProgressBlock that adds support for progressive downloads and adds the
- 
- @param block A block object to be called when an undetermined number of bytes have been downloaded from the server. This block has no return value and takes five arguments: the number of bytes read since the last time the download progress block was called, the bytes expected to be read during the request, the bytes already read during this request, the total bytes read (including from previous partial downloads), and the total bytes expected to be read for the file. This block may be called multiple times.
- 
- @see setDownloadProgressBlock
- */
-- (void)setProgressiveDownloadProgressBlock:(void (^)(NSInteger bytesRead, long long totalBytesRead, long long totalBytesExpected, long long totalBytesReadForFile, long long totalBytesExpectedToReadForFile))block;
+/// Called when when an undetermined number of bytes have been downloaded from the server.
+- (void)setProgressiveDownloadProgressBlock:(void (^)(RFFileDownloadOperation *operation))block;
 
 - (void)setCompletionBlockWithSuccess:(void (^)(RFFileDownloadOperation *operation, id responseObject))success failure:(void (^)(RFFileDownloadOperation *operation, NSError *error))failure;
 
 #pragma mark - Temp file
 
 /// Deletes the temporary file if operations is cancelled. Defaults to `NO`.
-@property (assign, getter=isDeletingTempFileOnCancel) BOOL deleteTempFileOnCancel;
+@property (assign, getter = isDeletingTempFileOnCancel) BOOL deleteTempFileOnCancel;
 
 /// Deletes the temporary file.
 /// Returns `NO` if an error happened, `YES` if the file is removed or did not exist in the first place.
