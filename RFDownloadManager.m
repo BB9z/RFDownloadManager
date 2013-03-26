@@ -139,7 +139,9 @@
     
     [aOperation setProgressiveDownloadProgressBlock:^(RFFileDownloadOperation *operation) {
         if ([self.delegate respondsToSelector:@selector(RFDownloadManager:operationStateUpdate:)]) {
-            [self.delegate RFDownloadManager:self operationStateUpdate:operation];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [self.delegate RFDownloadManager:self operationStateUpdate:operation];
+            }); 
         }
     }];
     
@@ -158,7 +160,9 @@
         [self.requrestURLs removeObject:operation.request.URL];
         
         if ([self.delegate respondsToSelector:@selector(RFDownloadManager:operationCompleted:)]) {
-            [self.delegate RFDownloadManager:self operationCompleted:operation];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [self.delegate RFDownloadManager:self operationCompleted:operation];
+            });
         }
     }
     else {
@@ -166,7 +170,9 @@
         dout_error(@"%@", operation.error);
         
         if ([self.delegate respondsToSelector:@selector(RFDownloadManager:operationFailed:)]) {
-            [self.delegate RFDownloadManager:self operationFailed:operation];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [self.delegate RFDownloadManager:self operationFailed:operation];
+            });
         }
     }
 }

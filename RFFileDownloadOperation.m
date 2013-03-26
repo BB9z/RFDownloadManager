@@ -333,9 +333,7 @@
     self.totalBytesReadPerDownload += [data length];
 
     if (self.progressiveDownloadProgressBlock) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            self.progressiveDownloadProgressBlock(self);
-        });
+        self.progressiveDownloadProgressBlock(self);
     }
 }
 
