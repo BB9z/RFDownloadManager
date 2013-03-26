@@ -46,6 +46,7 @@
 - (NSSet *)operations DEPRECATED_ATTRIBUTE;
 
 /// 是否有下载任务进行中
+/// Not Implemented yet.
 @property (readonly, nonatomic) BOOL isDownloading;
 
 /// How many file can download at the same time.
