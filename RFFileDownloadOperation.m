@@ -286,9 +286,22 @@
     return self.fileError ? self.fileError : [super error];
 }
 
+// Avoid errors when resuming a fully downloaded file by accepte 416.
++ (NSIndexSet *)acceptableStatusCodes {
+	NSMutableIndexSet *acceptableStatusCodes = [NSMutableIndexSet indexSetWithIndexesInRange:NSMakeRange(200, 100)];
+	[acceptableStatusCodes addIndex:416];
+	
+	return acceptableStatusCodes;
+}
+
 #pragma mark - NSURLConnectionDelegate
 
 - (void)connection:(NSURLConnection *)connection didReceiveResponse:(NSURLResponse *)response {
+    // Don't write to output stream if any error occurs
+    if (![self hasAcceptableStatusCode] || ![self hasAcceptableContentType]) {
+        return;
+    }
+
     [super connection:connection didReceiveResponse:response];
     
     // Check if we have the correct response
