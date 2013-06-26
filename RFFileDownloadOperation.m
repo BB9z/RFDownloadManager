@@ -297,11 +297,6 @@
 #pragma mark - NSURLConnectionDelegate
 
 - (void)connection:(NSURLConnection *)connection didReceiveResponse:(NSURLResponse *)response {
-    // Don't write to output stream if any error occurs
-    if (![self hasAcceptableStatusCode] || ![self hasAcceptableContentType]) {
-        return;
-    }
-
     [super connection:connection didReceiveResponse:response];
     
     // Check if we have the correct response
@@ -340,6 +335,11 @@
 }
 
 - (void)connection:(NSURLConnection *)connection didReceiveData:(NSData *)data  {
+    // Don't write to output stream if any error occurs
+    if (![self hasAcceptableStatusCode] || ![self hasAcceptableContentType]) {
+        return;
+    }
+    
     [super connection:connection didReceiveData:data];
     
     // Track custom bytes read because totalBytesRead persists between pause/resume.
