@@ -15,7 +15,7 @@
     - AFNetworking <https://github.com/AFNetworking/AFNetworking>
  */
 
-#import "RFRuntime.h"
+#import <Foundation/Foundation.h>
 #import "AFDownloadRequestOperation.h"
 
 @class RFDownloadManager;
@@ -33,17 +33,17 @@
 
 @end
 
-@interface RFDownloadManager : NSOperationQueue
+@interface RFDownloadManager : NSObject
 + (RFDownloadManager *)sharedInstance;
 - (RFDownloadManager *)initWithDelegate:(id<RFDownloadManagerDelegate>)delegate;
-@property (RF_WEAK, nonatomic) id<RFDownloadManagerDelegate> delegate;
+@property (weak, nonatomic) id<RFDownloadManagerDelegate> delegate;
 
-- (NSSet *)downloadingOperations;
-- (NSSet *)operationsInQueue;
-- (NSSet *)pausedOperations;
+- (NSArray *)downloadingOperations;
+- (NSArray *)operationsInQueue;
+- (NSArray *)pausedOperations;
 
 /// All operations: downloadingOperations + operationsInQueue + pausedOperations
-- (NSSet *)operations DEPRECATED_ATTRIBUTE;
+- (NSArray *)operations DEPRECATED_ATTRIBUTE;
 
 /// 是否有下载任务进行中
 /// Not Implemented yet.

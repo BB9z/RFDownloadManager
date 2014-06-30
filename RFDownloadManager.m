@@ -3,10 +3,10 @@
 #import "dout.h"
 
 @interface RFDownloadManager ()
-@property (RF_STRONG, atomic) NSMutableSet *requrestURLs;
-@property (RF_STRONG, atomic) NSMutableSet *requrestOperationsDownloading;
-@property (RF_STRONG, atomic) NSMutableSet *requrestOperationsQueue;
-@property (RF_STRONG, atomic) NSMutableSet *requrestOperationsPaused;
+@property (strong, atomic) NSMutableSet *requrestURLs;
+@property (strong, atomic) NSMutableArray *requrestOperationsDownloading;
+@property (strong, atomic) NSMutableArray *requrestOperationsQueue;
+@property (strong, atomic) NSMutableArray *requrestOperationsPaused;
 
 @property (assign, readwrite, nonatomic) BOOL isDownloading;
 @end
@@ -18,29 +18,31 @@
 }
 
 #pragma mark - Property
-- (NSSet *)downloadingOperations {
-    return [NSSet setWithSet:self.requrestOperationsDownloading];
+- (NSArray *)downloadingOperations {
+    return [self.requrestOperationsDownloading copy];
 }
 
-- (NSSet *)operationsInQueue {
-    return [NSSet setWithSet:self.requrestOperationsQueue];
+- (NSArray *)operationsInQueue {
+    return [self.requrestOperationsQueue copy];
 }
 
-- (NSSet *)pausedOperations {
-    return [NSSet setWithSet:self.requrestOperationsPaused];
+- (NSArray *)pausedOperations {
+    return [self.requrestOperationsPaused copy];
 }
 
-- (NSSet *)operations {
-    return [[self.requrestOperationsDownloading setByAddingObjectsFromSet:self.requrestOperationsQueue] setByAddingObjectsFromSet:self.requrestOperationsPaused];
+- (NSArray *)operations {
+    NSMutableArray *total = [NSMutableArray arrayWithArray:self.requrestOperationsDownloading];
+    [total addObjectsFromArray:self.requrestOperationsQueue];
+    [total addObjectsFromArray:self.pausedOperations];
+    return total;
 }
 
 - (void)setMaxRunningTaskCount:(uint)maxRunningTaskCount {
     if (_maxRunningTaskCount != maxRunningTaskCount) {
-        [self willChangeValueForKey:@keypath(self, maxRunningTaskCount)];
         int diffCount = self.downloadingOperations.count - maxRunningTaskCount;
         if (diffCount > 0) {
             for (int i = diffCount; i > 0; i--) {
-                AFDownloadRequestOperation *operation = [self.downloadingOperations anyObject];
+                AFDownloadRequestOperation *operation = [self.downloadingOperations lastObject];
                 [operation pause];
                 [self.requrestOperationsPaused addObject:operation];
                 [self.requrestOperationsDownloading removeObject:operation];
@@ -52,7 +54,6 @@
             }
         }
         _maxRunningTaskCount = maxRunningTaskCount;
-        [self didChangeValueForKey:@keypath(self, maxRunningTaskCount)];
     }
 }
 
@@ -62,9 +63,9 @@
     if (self) {
         _isDownloading = NO;
         _requrestURLs = [NSMutableSet set];
-        _requrestOperationsQueue = [NSMutableSet set];
-        _requrestOperationsDownloading = [NSMutableSet setWithCapacity:5];
-        _requrestOperationsPaused = [NSMutableSet set];
+        _requrestOperationsQueue = [NSMutableArray array];
+        _requrestOperationsDownloading = [NSMutableArray arrayWithCapacity:5];
+        _requrestOperationsPaused = [NSMutableArray array];
         _maxRunningTaskCount = 3;
         _shouldResume = YES;
     }
@@ -171,12 +172,12 @@
 #pragma mark - Queue Manage
 - (void)startAll {
     // Paused => Queue
-    [self.requrestOperationsQueue unionSet:self.requrestOperationsPaused];
+    [self.requrestOperationsQueue removeObjectsInArray:self.requrestOperationsPaused];
     [self.requrestOperationsPaused removeAllObjects];
     
     // Queue => Start
     while (self.requrestOperationsDownloading.count < _maxRunningTaskCount) {
-        AFDownloadRequestOperation *operation = [self.requrestOperationsQueue anyObject];
+        AFDownloadRequestOperation *operation = [self.requrestOperationsQueue firstObject];
         if (!operation) break;
         
         [self startOperation:operation];
@@ -185,30 +186,30 @@
 - (void)pauseAll {
     AFDownloadRequestOperation *operation;
     // Downloading => Pause
-    while ((operation = [self.requrestOperationsDownloading anyObject])) {
+    while ((operation = [self.requrestOperationsDownloading lastObject])) {
         [self pauseOperation:operation];
     }
     
     // Queue => Pause
-    [self.requrestOperationsPaused unionSet:self.requrestOperationsQueue];
+    [self.requrestOperationsPaused addObjectsFromArray:self.requrestOperationsQueue];
     [self.requrestOperationsQueue removeAllObjects];
 }
 - (void)cancelAll {
     AFDownloadRequestOperation *operation;
-    while ((operation = [self.requrestOperationsPaused anyObject])) {
+    while ((operation = [self.requrestOperationsPaused lastObject])) {
         [self cancelOperation:operation];
     }
-    while ((operation = [self.requrestOperationsQueue anyObject])) {
+    while ((operation = [self.requrestOperationsQueue lastObject])) {
         [self cancelOperation:operation];
     }
-    while ((operation = [self.requrestOperationsDownloading anyObject])) {
+    while ((operation = [self.requrestOperationsDownloading lastObject])) {
         [self cancelOperation:operation];
     }
 }
 
 - (void)startNextQueuedOperation {
     if (self.requrestOperationsQueue.count > 0 && self.requrestOperationsDownloading.count < self.maxRunningTaskCount) {
-        AFDownloadRequestOperation *operationNext = [self.requrestOperationsQueue anyObject];
+        AFDownloadRequestOperation *operationNext = [self.requrestOperationsQueue firstObject];
         [self startOperation:operationNext];
     }
 }
