@@ -1,0 +1,3 @@
+[submodule "AFDownloadRequestOperation"]
+	path = AFDownloadRequestOperation
+	url = https://github.com/steipete/AFDownloadRequestOperation.git
