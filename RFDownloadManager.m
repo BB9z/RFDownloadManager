@@ -1,6 +1,5 @@
 
 #import "RFDownloadManager.h"
-#import "AFNetworking.h"
 #import "dout.h"
 
 @interface RFDownloadManager ()
@@ -13,14 +12,6 @@
 @end
 
 @implementation RFDownloadManager
-@synthesize delegate = _delegate;
-@synthesize isDownloading = _isDownloading;
-@synthesize maxRunningTaskCount = _maxRunningTaskCount;
-@synthesize shouldResume = _shouldResume;
-@synthesize requrestURLs = _requrestURLs;
-@synthesize requrestOperationsDownloading = _requrestOperationsDownloading;
-@synthesize requrestOperationsQueue = _requrestOperationsQueue;
-@synthesize requrestOperationsPaused = _requrestOperationsPaused;
 
 - (NSString *)description {
     return [NSString stringWithFormat:@"<%@: %p, downloading:%@, queue:%@, paused:%@>", [self class], self, self.requrestOperationsDownloading, self.requrestOperationsQueue, self.requrestOperationsPaused];
@@ -49,7 +40,7 @@
         int diffCount = self.downloadingOperations.count - maxRunningTaskCount;
         if (diffCount > 0) {
             for (int i = diffCount; i > 0; i--) {
-                RFFileDownloadOperation *operation = [self.downloadingOperations anyObject];
+                AFDownloadRequestOperation *operation = [self.downloadingOperations anyObject];
                 [operation pause];
                 [self.requrestOperationsPaused addObject:operation];
                 [self.requrestOperationsDownloading removeObject:operation];
@@ -98,13 +89,13 @@
 }
 
 #pragma mark -
-- (RFFileDownloadOperation *)addURL:(NSURL *)url fileStorePath:(NSString *)destinationFilePath {
+- (AFDownloadRequestOperation *)addURL:(NSURL *)url fileStorePath:(NSString *)destinationFilePath {
     if ([self.requrestURLs containsObject:url]) {
         dout_warning(@"RFDownloadManager: the url already existed. %@", url);
         return nil;
     }
 
-    RFFileDownloadOperation *downloadOperation = [[RFFileDownloadOperation alloc] initWithRequest:[NSURLRequest requestWithURL:url] targetPath:destinationFilePath shouldResume:self.shouldResume shouldCoverOldFile:YES];
+    AFDownloadRequestOperation *downloadOperation = [[AFDownloadRequestOperation alloc] initWithRequest:[NSURLRequest requestWithURL:url] targetPath:destinationFilePath shouldResume:self.shouldResume];
     if (downloadOperation == nil) {
         return nil;
     }
@@ -116,8 +107,8 @@
     return downloadOperation;
 }
 
-- (RFFileDownloadOperation *)findOperationWithURL:(NSURL *)url {
-    RFFileDownloadOperation *operation = nil;
+- (AFDownloadRequestOperation *)findOperationWithURL:(NSURL *)url {
+    AFDownloadRequestOperation *operation = nil;
     
 #define _RFDownloadManagerFindOperationInSet(RequrestOperations)\
     for (operation in RequrestOperations) {\
@@ -133,26 +124,26 @@
     return nil;
 }
 
-- (void)setupDownloadOperation:(RFFileDownloadOperation *)downloadOperation {
-    __weak RFFileDownloadOperation *aOperation = downloadOperation;
+- (void)setupDownloadOperation:(AFDownloadRequestOperation *)downloadOperation {
+    __weak AFDownloadRequestOperation *aOperation = downloadOperation;
     aOperation.deleteTempFileOnCancel = YES;
     
-    [aOperation setProgressiveDownloadProgressBlock:^(RFFileDownloadOperation *operation) {
+    [aOperation setProgressiveDownloadProgressBlock:^(AFDownloadRequestOperation *operation, NSInteger bytesRead, long long totalBytesRead, long long totalBytesExpected, long long totalBytesReadForFile, long long totalBytesExpectedToReadForFile) {
         if ([self.delegate respondsToSelector:@selector(RFDownloadManager:operationStateUpdate:)]) {
             dispatch_async(dispatch_get_main_queue(), ^{
                 [self.delegate RFDownloadManager:self operationStateUpdate:operation];
-            }); 
+            });
         }
     }];
-    
-    [aOperation setCompletionBlockWithSuccess:^(RFFileDownloadOperation *operation, id responseObject) {
-        [self onFileDownloadOperationComplete:operation success:YES];
-    } failure:^(RFFileDownloadOperation *operation, NSError *error) {
-        [self onFileDownloadOperationComplete:operation success:NO];
+
+    [aOperation setCompletionBlockWithSuccess:^(AFHTTPRequestOperation *op, id responseObject) {
+        [self onFileDownloadOperationComplete:(id)op success:YES];
+    } failure:^(AFHTTPRequestOperation *op, NSError *error) {
+        [self onFileDownloadOperationComplete:(id)op success:NO];
     }];
 }
 
-- (void)onFileDownloadOperationComplete:(RFFileDownloadOperation *)operation success:(BOOL)success {
+- (void)onFileDownloadOperationComplete:(AFDownloadRequestOperation *)operation success:(BOOL)success {
     [self.requrestOperationsDownloading removeObject:operation];
     [self startNextQueuedOperation];
 
@@ -185,14 +176,14 @@
     
     // Queue => Start
     while (self.requrestOperationsDownloading.count < _maxRunningTaskCount) {
-        RFFileDownloadOperation *operation = [self.requrestOperationsQueue anyObject];
+        AFDownloadRequestOperation *operation = [self.requrestOperationsQueue anyObject];
         if (!operation) break;
         
         [self startOperation:operation];
     }
 }
 - (void)pauseAll {
-    RFFileDownloadOperation *operation;
+    AFDownloadRequestOperation *operation;
     // Downloading => Pause
     while ((operation = [self.requrestOperationsDownloading anyObject])) {
         [self pauseOperation:operation];
@@ -203,7 +194,7 @@
     [self.requrestOperationsQueue removeAllObjects];
 }
 - (void)cancelAll {
-    RFFileDownloadOperation *operation;
+    AFDownloadRequestOperation *operation;
     while ((operation = [self.requrestOperationsPaused anyObject])) {
         [self cancelOperation:operation];
     }
@@ -217,13 +208,13 @@
 
 - (void)startNextQueuedOperation {
     if (self.requrestOperationsQueue.count > 0 && self.requrestOperationsDownloading.count < self.maxRunningTaskCount) {
-        RFFileDownloadOperation *operationNext = [self.requrestOperationsQueue anyObject];
+        AFDownloadRequestOperation *operationNext = [self.requrestOperationsQueue anyObject];
         [self startOperation:operationNext];
     }
 }
 
 // Note: 这些方法本身会管理队列
-- (void)startOperation:(RFFileDownloadOperation *)operation {
+- (void)startOperation:(AFDownloadRequestOperation *)operation {
     if (!operation) {
         dout_warning(@"RFDownloadManager > startOperation: operation is nil")
         return;
@@ -247,7 +238,7 @@
         [self.requrestOperationsQueue addObject:operation];
     }
 }
-- (void)pauseOperation:(RFFileDownloadOperation *)operation {
+- (void)pauseOperation:(AFDownloadRequestOperation *)operation {
     if (!operation) {
         dout_warning(@"RFDownloadManager > pauseOperation: operation is nil")
         return;
@@ -261,7 +252,7 @@
     [self.requrestOperationsQueue removeObject:operation];
     [self.requrestOperationsDownloading removeObject:operation];
 }
-- (void)cancelOperation:(RFFileDownloadOperation *)operation {
+- (void)cancelOperation:(AFDownloadRequestOperation *)operation {
     if (!operation) {
         dout_warning(@"RFDownloadManager > cancelOperation: operation is nil")
         return;

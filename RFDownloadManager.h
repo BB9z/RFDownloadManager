@@ -1,9 +1,9 @@
 /*!
     RFDownloadManager
-    ver =_=
+    ver 0.1
 
-    Copyright (c) 2012-2013 BB9z
-    https://github.com/bb9z/RFDownloadManager
+    Copyright (c) 2012-2014 BB9z
+    https://github.com/BB9z/RFDownloadManager
 
     The MIT License (MIT)
     http://www.opensource.org/licenses/mit-license.php
@@ -16,24 +16,24 @@
  */
 
 #import "RFRuntime.h"
-#import "RFFileDownloadOperation.h"
+#import "AFDownloadRequestOperation.h"
 
 @class RFDownloadManager;
 
 @protocol RFDownloadManagerDelegate <NSObject>
 @optional
 // 成功下载
-- (void)RFDownloadManager:(RFDownloadManager *)downloadManager operationCompleted:(RFFileDownloadOperation *)operation;
+- (void)RFDownloadManager:(RFDownloadManager *)downloadManager operationCompleted:(AFDownloadRequestOperation *)operation;
 
 // 下载失败
-- (void)RFDownloadManager:(RFDownloadManager *)downloadManager operationFailed:(RFFileDownloadOperation *)operation;
+- (void)RFDownloadManager:(RFDownloadManager *)downloadManager operationFailed:(AFDownloadRequestOperation *)operation;
 
 // 用于下载状态更新，进度、速度
-- (void)RFDownloadManager:(RFDownloadManager *)downloadManager operationStateUpdate:(RFFileDownloadOperation *)operation;
+- (void)RFDownloadManager:(RFDownloadManager *)downloadManager operationStateUpdate:(AFDownloadRequestOperation *)operation;
 
 @end
 
-@interface RFDownloadManager : NSObject
+@interface RFDownloadManager : NSOperationQueue
 + (RFDownloadManager *)sharedInstance;
 - (RFDownloadManager *)initWithDelegate:(id<RFDownloadManagerDelegate>)delegate;
 @property (RF_WEAK, nonatomic) id<RFDownloadManagerDelegate> delegate;
@@ -59,18 +59,18 @@
 @property (assign, nonatomic) BOOL shouldResume;
 
 /// Return nil, if has the url or operation creat failure.
-- (RFFileDownloadOperation *)addURL:(NSURL *)url fileStorePath:(NSString *)destinationFilePath;
-- (RFFileDownloadOperation *)findOperationWithURL:(NSURL *)url;
+- (AFDownloadRequestOperation *)addURL:(NSURL *)url fileStorePath:(NSString *)destinationFilePath;
+- (AFDownloadRequestOperation *)findOperationWithURL:(NSURL *)url;
 
 /// Subclass can override this method to change operation option.
-- (void)setupDownloadOperation:(RFFileDownloadOperation *)downloadOperation;
+- (void)setupDownloadOperation:(AFDownloadRequestOperation *)downloadOperation;
 
 - (void)startAll;
 - (void)pauseAll;
 - (void)cancelAll;
-- (void)startOperation:(RFFileDownloadOperation *)operation;
-- (void)pauseOperation:(RFFileDownloadOperation *)operation;
-- (void)cancelOperation:(RFFileDownloadOperation *)operation;
+- (void)startOperation:(AFDownloadRequestOperation *)operation;
+- (void)pauseOperation:(AFDownloadRequestOperation *)operation;
+- (void)cancelOperation:(AFDownloadRequestOperation *)operation;
 - (void)startOperationWithURL:(NSURL *)url;
 - (void)pauseOperationWithURL:(NSURL *)url;
 - (void)cancelOperationWithURL:(NSURL *)url;
