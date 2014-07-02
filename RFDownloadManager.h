@@ -16,7 +16,7 @@
  */
 
 #import <Foundation/Foundation.h>
-#import "AFDownloadRequestOperation.h"
+#import "AFDownloadRequestOperation+RFFileDownload.h"
 
 @class RFDownloadManager;
 
