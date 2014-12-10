@@ -58,7 +58,7 @@
 }
 
 #pragma mark -
-- (RFDownloadManager *)init {
+- (instancetype)init {
     self = [super init];
     if (self) {
         _isDownloading = NO;
@@ -72,7 +72,7 @@
     return self;
 }
 
-- (RFDownloadManager *)initWithDelegate:(id<RFDownloadManagerDelegate>)delegate {
+- (instancetype)initWithDelegate:(id<RFDownloadManagerDelegate>)delegate {
     self = [self init];
     if (self) {
         self.delegate = delegate;

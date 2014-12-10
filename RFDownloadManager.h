@@ -11,7 +11,7 @@
 
 /**
     RFDownloadManager needs:
-    - RFKit <https://github.com/BB9z/RFKit>
+    - RFKit <https://github.com/RFUI/Core>
     - AFNetworking <https://github.com/AFNetworking/AFNetworking>
  */
 
@@ -34,8 +34,8 @@
 @end
 
 @interface RFDownloadManager : NSObject
-+ (RFDownloadManager *)sharedInstance;
-- (RFDownloadManager *)initWithDelegate:(id<RFDownloadManagerDelegate>)delegate;
++ (instancetype)sharedInstance;
+- (instancetype)initWithDelegate:(id<RFDownloadManagerDelegate>)delegate;
 @property (weak, nonatomic) id<RFDownloadManagerDelegate> delegate;
 
 - (NSArray *)downloadingOperations;
